@@ -1,0 +1,33 @@
+meta = {
+    'models': {
+        'Aloha': {
+            'public': True,
+            'any_inputs': True,
+            'params': ['data'],
+            'attrs': ['val_out', 'node_id'],
+        },
+    }
+}
+
+meta = {
+    'models': {
+        'Aloha': {
+            'public': True,
+            'any_inputs': True,
+            'params': ['data'],
+            'attrs': ['val_out', 'node_id'],
+        },
+    }
+}
+
+# Connect bus to controller
+    buses = filter(lambda e: e.type == 'PQBus', grid)
+    buses = {b.eid.split('-')[1]: b for b in buses}
+    ##print(len(buses))
+    ##print(buses)
+    c_data = world.get_data(controllers, 'node_id')
+    ##print("c_data:", c_data)
+    for c in controllers:
+        node_id = c_data[c]['node_id']
+        ##print("node_id:", node_id)
+        world.connect(buses[node_id], c, 'Vm', 'Va')

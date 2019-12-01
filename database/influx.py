@@ -28,7 +28,7 @@ class Simulator(mosaik_api.Simulator):
     def __init__(self):
         super().__init__(meta)
         self.eid = 'influxdb-collector'
-        self.step_size = None
+        self.step_size = 60
         self.utc_start_timestamp = None
         self.run_id = None
         self.time_unit = None
@@ -71,7 +71,7 @@ class Simulator(mosaik_api.Simulator):
 
         # Create the database if non-existent
         existing_db_names = [record['name'] for record in self.db_client.get_list_database()]
-        print(existing_db_names)
+        #print(existing_db_names)
         if db_name not in existing_db_names:
             self.db_client.create_database(db_name)
 

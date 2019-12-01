@@ -151,4 +151,4 @@ class CSV(mosaik_api.Simulator):
 
 
 def main():
-    return mosaik_api.start_simulation(CSV(), 'mosaik-csv simulator')
+    return mosaik_api.start_simulation(CSV(), 'controller-csv simulator')

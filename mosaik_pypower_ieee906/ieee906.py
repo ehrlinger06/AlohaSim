@@ -33,10 +33,10 @@ def get_load_busses():
 
 def connect_ieee906(world, start_time=START):
     """
-    This method connects a mosaik-pypower instance with the IEEE 906 Test Feeder and respective loads as mosaik-csv
+    This method connects a controller-pypower instance with the IEEE 906 Test Feeder and respective loads as controller-csv
     simulators to the provided world.
 
-    :param world: mosaik world to connect the pypower and csv simulator
+    :param world: controller world to connect the pypower and csv simulator
     :param start_time: starting time, default 00:00:00
     :return: reference to the grid and houses entities, in order to e.g. connect further simulators or write results to
      a database.
@@ -52,7 +52,7 @@ def connect_ieee906(world, start_time=START):
     # Start power simulator
     pypower = world.start('PyPower', step_size=60)
 
-    # Feed in the 11 kV level to mosaik-pypower
+    # Feed in the 11 kV level to controller-pypower
     rdb.base_mva[11] = 1
 
     # Instantiate ieee 906 grid models
