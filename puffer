@@ -31,3 +31,8 @@ meta = {
         node_id = c_data[c]['node_id']
         ##print("node_id:", node_id)
         world.connect(buses[node_id], c, 'Vm', 'Va')
+
+        for i in range(num):
+            print("in loop")
+            eid = 'Aloha_%s' % (i + start_idx)
+            self.models[eid] = AlohaOben(data, id=(i + start_idx))

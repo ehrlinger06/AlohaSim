@@ -58,8 +58,14 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
     # Start simulators
     flexev = world.start("FlexEVSim", sim_start=START)
     aloha = world.start("AlohaSim", step_size=60)
-    amount = random.seed(42)
-    controllers = aloha.Aloha.create(55, value=20)
+    amount = 55
+
+    controllers = []
+    for i in range(amount):
+        controllers.append(aloha.AlohaOben(data=5))
+    #controllers = aloha.Aloha.create(55, data=20)
+    #controllers = [aloha.AlohaOben(5, i) for i in range(amount)]
+
     #print("len(controllers):", len(controllers))
     #print(controllers[0])
 
@@ -130,12 +136,12 @@ def connect_cs_to_grid(world, controllers, evs, grid):
     ##print(len(buses))
     ##print(buses)
     c_data = world.get_data(controllers, 'node_id')
-    ##print("c_data:", c_data)
+    print("c_data:", c_data)
     for c in controllers:
         node_id = c_data[c]['node_id']
-        ##print("node_id:", node_id)
+        print("node_id:", node_id)
         index = list(buses.keys())
-        #print(index)
+        print(index)
         # print(index)
         world.connect(buses[index[node_id]], c, 'Vm', 'Va')
 
@@ -162,6 +168,14 @@ def connect_cs_to_grid(world, controllers, evs, grid):
     for ev in evs:
         node_id = ev_data[ev]['node_id']
         world.connect(ev, buses[node_id], 'P', 'Q', time_shifted=True, initial_data={'P': 0.0, 'Q': 0.0})
+
+    # look at values for voltage
+    c_nodeIDs = c_data
+    print(c_nodeIDs)
+    #c_voltage = world.get_data(controllers, 'voltage')
+    #print(c_voltage)
+    for c in controllers:
+        print(c)
 
 
 main()
