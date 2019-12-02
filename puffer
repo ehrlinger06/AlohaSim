@@ -36,3 +36,57 @@ meta = {
             print("in loop")
             eid = 'Aloha_%s' % (i + start_idx)
             self.models[eid] = AlohaOben(data, id=(i + start_idx))
+
+    def step(self, time, inputs=None):
+        data = self.next_row
+        if data is None:
+            raise IndexError('End of CSV file reached.')
+
+        print("data:", data)
+        # Check date
+        date = data[0]
+        timeInput = time
+        hr = 0
+        min = 0
+        days = 0
+        # print(("DAY aus mosaik_csv_cyclic:", DAY))
+        print("time:", time)
+        if time / 86400 >= 1:
+            days = int(time / 86400)
+            time = time - (days * 86400)
+
+        if time / 3600 >= 1:
+            hr = int(time / 3600)
+            time = time - (hr * 3600)
+
+        if time / 60 >= 1:
+            min = int(time / 60)
+            time = time - (min * 60)
+
+        sec = time
+        time = timeInput
+        expected_date = self.start_date.replace(hour=hr, minute=min, second=sec)
+        # set expected date always to start date
+        date.replace(hour=hr, minute=min, second=sec)
+        date.replace(year=YEAR, month=MONTH, day=(days + DAY))
+        expected_date = expected_date.replace(year=YEAR, month=MONTH, day=(days + DAY))
+        if date != self.start_date:
+            print("date != self.start_date")
+            print("date:", date)
+            print("self.start_date:", self.start_date)
+            print("expecteddate:", expected_date)
+        if date != expected_date:
+            raise IndexError('Wrong date "%s", expected "%s"' % (
+                date.format(DATE_FORMAT),
+                expected_date.format(DATE_FORMAT)))
+
+        # Put data into the cache for get_data() calls
+        self.cache = {}
+        for attr, val in zip(self.attrs, data[1:]):
+            self.cache[attr] = float(val)
+
+        self._read_next_row()
+        if self.next_row is not None:
+            return time + 60 #(self.next_row[0].timestamp - date.timestamp)
+        else:
+            return float('inf')

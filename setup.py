@@ -21,8 +21,8 @@ sim_config = {
 
 }
 
-START = '2019-11-25 00:00:00'
-END = '2019-11-26 00:00:00'
+START = '2019-11-18 00:00:00'
+END = '2019-11-24 00:00:00'
 DIFF = datetime.fromisoformat(END.replace(' ', 'T')) - datetime.fromisoformat(START.replace(' ', 'T'))
 DURATION = DIFF.total_seconds()
 GRID_NAME = 'ieee906'
@@ -62,7 +62,7 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
 
     controllers = []
     for i in range(amount):
-        controllers.append(aloha.AlohaOben(data=5))
+        controllers.append(aloha.AlohaOben(data=i))
     #controllers = aloha.Aloha.create(55, data=20)
     #controllers = [aloha.AlohaOben(5, i) for i in range(amount)]
 
@@ -136,27 +136,32 @@ def connect_cs_to_grid(world, controllers, evs, grid):
     ##print(len(buses))
     ##print(buses)
     c_data = world.get_data(controllers, 'node_id')
-    print("c_data:", c_data)
+    # print("c_data:", c_data)
     for c in controllers:
         node_id = c_data[c]['node_id']
-        print("node_id:", node_id)
+        # print("node_id:", node_id)
         index = list(buses.keys())
-        print(index)
         # print(index)
-        world.connect(buses[index[node_id]], c, 'Vm', 'Va')
+        # print(index)
+        world.connect(buses[index[node_id]], c, 'Vm', 'Va', 'Q')
 
     # connect controller to evs
+    # print("evs:", evs)
     ev_data = world.get_data(evs, 'node_id')
+    # print("ev_data:", ev_data)
     ev_by_node_id = {ev_data[ev]['node_id']: [] for ev in evs}
+    # print("ev_by_node_id before:", ev_by_node_id)
     for ev in evs:
         node_id = ev_data[ev]['node_id']
         ev_by_node_id[node_id].append(ev)
 
+    # print("ev_by_node_id after:", ev_by_node_id)
     #print(ev_by_node_id)
     for c in controllers:
         node_id = c_data[c]['node_id']
-        #print("nodeID:", node_id)
+        # print("nodeID:", node_id)
         index = list(ev_by_node_id.keys())
+        # print("index:", index)
         ev = ev_by_node_id[index[node_id]].pop(0)
         world.connect(c, ev, ('P_out', 'P'), ('Q_out', 'Q'), ('Vm', 'voltage'))
         world.connect(ev, c, 'arrival_time', 'departure_time', 'available', 'current_soc', 'possible_charge_rate',
@@ -169,13 +174,6 @@ def connect_cs_to_grid(world, controllers, evs, grid):
         node_id = ev_data[ev]['node_id']
         world.connect(ev, buses[node_id], 'P', 'Q', time_shifted=True, initial_data={'P': 0.0, 'Q': 0.0})
 
-    # look at values for voltage
-    c_nodeIDs = c_data
-    print(c_nodeIDs)
-    #c_voltage = world.get_data(controllers, 'voltage')
-    #print(c_voltage)
-    for c in controllers:
-        print(c)
 
 
 main()

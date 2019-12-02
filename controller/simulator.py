@@ -9,7 +9,7 @@ meta = {
             'any_inputs': True,
             'params': ['data'],
             'attrs': ['node_id', 'voltage', 'Vm', 'Va', 'P_out', 'Q_out', 'arrival_time', 'departure_time',
-                      'available', 'current_soc', 'possible_charge_rate'],
+                      'available', 'current_soc', 'possible_charge_rate', 'Q'],
         },
     }
 }
@@ -20,11 +20,40 @@ class AlohaOben:
         self.data = data
         self.counter = 0
         # self.val_out = self.data[0]
-        self.node_id = 5
+        self.node_id = data
+        self.voltage = 230.0
+        self.P_out=5.0
+        self.Q_out = 200.0
+        self.Vm=230.0
 
-    def step(self, steps):
-        self.counter = (self.counter + steps) % len(self.data)
-        self.val_out = self.data[self.counter]
+    def step(self, steps, inputs):
+
+        # print("inputs:", inputs)
+        #self.counter = (self.counter + steps) % len(self.data)
+        self.counter = (self.counter + steps)
+        #self.val_out = self.data[self.counter]
+        current = list(inputs.keys())
+        # print("current:", current)
+        # print("node_id:", self.node_id)
+        # currentByNodeID = inputs[current[self.node_id]]
+        # print("currentByNodeID:", currentByNodeID)
+        # alpha = currentByNodeID['Vm']
+        # print("alpha:", alpha)
+        beta = list(inputs[list(inputs.keys())[self.node_id]]['Vm'].values())[0]
+        # print("beta:", beta)
+        omega = list(inputs[list(inputs.keys())[self.node_id]]['possible_charge_rate'].values())[0]
+        # print("omega:", omega)
+        alpha = list(inputs[list(inputs.keys())[self.node_id]]['Q'].values())[0]
+        # print("alpha:", alpha)
+        Vm = list(inputs[list(inputs.keys())[self.node_id]]['Vm'].values())[0]
+        Va = list(inputs[list(inputs.keys())[self.node_id]]['Va'].values())[0]
+        Q = list(inputs[list(inputs.keys())[self.node_id]]['Q'].values())[0]
+        Q_out = Q
+        P_out = Va * Vm
+        if self.Vm == Vm:
+            print("same")
+
+
 
 
 class AlohaSim(mosaik_api.Simulator):
@@ -69,8 +98,9 @@ class AlohaSim(mosaik_api.Simulator):
         return [{'eid': eid, 'type': model}]
 
     def step(self, time, inputs):
+        # print("am I in here?")
         for model in self.models.values():
-            model.step(self.step_size)
+            model.step(self.step_size, inputs)
 
         return time + self.step_size
 
@@ -93,7 +123,10 @@ class AlohaSim(mosaik_api.Simulator):
 
                 # Get model.val or model.delta:
                 # print("self._entities[eid]:", self._entities[eid])
+                # print("getattr(models[eid], P_out):", getattr(models[eid], attr))
+                # print("getattr(models[eid], departure_time):", getattr(models[eid], 'departure_time'))
                 data[eid][attr] = getattr(models[eid], attr)
+                # getattr(models[eid])
                 # data[eid][attr] = self._entities[eid]
                 # print("data[eid][attr]:", data[eid][attr])
 

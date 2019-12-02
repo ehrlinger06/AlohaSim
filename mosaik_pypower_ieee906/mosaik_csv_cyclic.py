@@ -26,7 +26,9 @@ class CSV(mosaik_api.Simulator):
 
     def init(self, sid, sim_start, datafile):
         self.start_date = arrow.get(sim_start)
+        # print
         # set date to date of the files
+        # print("self.start_date aus mosaik_csv_cyclic:", self.start_date)
         self.start_date.replace(year=YEAR, month=MONTH, day=DAY)
         self.next_date = self.start_date
 
@@ -65,20 +67,8 @@ class CSV(mosaik_api.Simulator):
 
         # Check date
         date = data[0]
-        timeInput = time
-        hr = 0
-        min = 0
-        if time / 3600 >= 1:
-            hr = int(time / 3600)
-            time = time - (hr * 3600)
-
-        if time / 60 >= 1:
-            min = int(time / 60)
-            time = time - (min * 60)
-
-        sec = time
-        time = timeInput
-        expected_date = self.start_date.replace(hour=hr, minute=min, second=sec)
+        print("time:", time)
+        expected_date = self.start_date.replace(seconds=time)
         # set expected date always to start date
         expected_date = expected_date.replace(year=YEAR, month=MONTH, day=DAY)
         if date != expected_date:
@@ -93,7 +83,7 @@ class CSV(mosaik_api.Simulator):
 
         self._read_next_row()
         if self.next_row is not None:
-            return time + 60 #(self.next_row[0].timestamp - date.timestamp)
+            return time + 60  # (self.next_row[0].timestamp - date.timestamp)
         else:
             return float('inf')
 
