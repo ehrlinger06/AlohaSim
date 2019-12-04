@@ -9,7 +9,7 @@ meta = {
             'any_inputs': True,
             'params': ['data'],
             'attrs': ['node_id', 'voltage', 'Vm', 'Va', 'P_out', 'Q_out', 'arrival_time', 'departure_time',
-                      'available', 'current_soc', 'possible_charge_rate', 'Q'],
+                      'available', 'current_soc', 'possible_charge_rate', 'Q', 'P', 'I_real', 'I_imag'],
         },
     }
 }
@@ -21,39 +21,25 @@ class AlohaOben:
         self.counter = 0
         # self.val_out = self.data[0]
         self.node_id = data
-        self.voltage = 230.0
-        self.P_out=5.0
+        # self.voltage = 251.0
+        self.P_out = 5.0
         self.Q_out = 200.0
-        self.Vm=230.0
+        self.Vm = 250.0
 
     def step(self, steps, inputs):
-
-        # print("inputs:", inputs)
-        #self.counter = (self.counter + steps) % len(self.data)
         self.counter = (self.counter + steps)
-        #self.val_out = self.data[self.counter]
-        current = list(inputs.keys())
-        # print("current:", current)
-        # print("node_id:", self.node_id)
-        # currentByNodeID = inputs[current[self.node_id]]
-        # print("currentByNodeID:", currentByNodeID)
-        # alpha = currentByNodeID['Vm']
-        # print("alpha:", alpha)
-        beta = list(inputs[list(inputs.keys())[self.node_id]]['Vm'].values())[0]
-        # print("beta:", beta)
-        omega = list(inputs[list(inputs.keys())[self.node_id]]['possible_charge_rate'].values())[0]
-        # print("omega:", omega)
-        alpha = list(inputs[list(inputs.keys())[self.node_id]]['Q'].values())[0]
-        # print("alpha:", alpha)
         Vm = list(inputs[list(inputs.keys())[self.node_id]]['Vm'].values())[0]
         Va = list(inputs[list(inputs.keys())[self.node_id]]['Va'].values())[0]
         Q = list(inputs[list(inputs.keys())[self.node_id]]['Q'].values())[0]
+        P = list(inputs[list(inputs.keys())[self.node_id]]['P'].values())[0]
+        I_real = list(inputs[list(inputs.keys())[self.node_id]]['I_real'].values())[0]
+        I_imag = list(inputs[list(inputs.keys())[self.node_id]]['I_imag'].values())[0]
+        print(self.node_id)
+        print("I, real and imag", I_real, I_imag)
+        self.voltage = Vm
         Q_out = Q
-        P_out = Va * Vm
-        if self.Vm == Vm:
-            print("same")
-
-
+        # TODO nicht i_real sonder possile charge rate
+        self.P_out = I_real * Vm
 
 
 class AlohaSim(mosaik_api.Simulator):
@@ -75,7 +61,7 @@ class AlohaSim(mosaik_api.Simulator):
         # }
         return self.meta
 
-    def create(self, num, model, data=0):
+    def create(self, num, model, data):
         if model != 'AlohaOben':
             raise ValueError('Unknown model: "{0}"'.format(model))
 
@@ -121,13 +107,6 @@ class AlohaSim(mosaik_api.Simulator):
                     # print("Here")
                     raise ValueError('Unknown output attribute: {0}'.format(attr))
 
-                # Get model.val or model.delta:
-                # print("self._entities[eid]:", self._entities[eid])
-                # print("getattr(models[eid], P_out):", getattr(models[eid], attr))
-                # print("getattr(models[eid], departure_time):", getattr(models[eid], 'departure_time'))
                 data[eid][attr] = getattr(models[eid], attr)
-                # getattr(models[eid])
-                # data[eid][attr] = self._entities[eid]
-                # print("data[eid][attr]:", data[eid][attr])
 
         return data

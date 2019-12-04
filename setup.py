@@ -22,7 +22,7 @@ sim_config = {
 }
 
 START = '2019-11-18 00:00:00'
-END = '2019-11-24 00:00:00'
+END = '2019-11-20 00:00:00'
 DIFF = datetime.fromisoformat(END.replace(' ', 'T')) - datetime.fromisoformat(START.replace(' ', 'T'))
 DURATION = DIFF.total_seconds()
 GRID_NAME = 'ieee906'
@@ -48,7 +48,7 @@ def main():
     create_scenario(world, GRID_NAME, scenarios[0], charge_speed=speeds[0], method=methods[0], limit=limits[0],
                     seed=42,
                     influxdb=True)
-    world.run(until=DURATION)  # As fast as possilbe
+    # world.run(until=DURATION)  # As fast as possilbe
     world.shutdown()  # delete world again
 
 
@@ -60,9 +60,7 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
     aloha = world.start("AlohaSim", step_size=60)
     amount = 55
 
-    controllers = []
-    for i in range(amount):
-        controllers.append(aloha.AlohaOben(data=i))
+
     #controllers = aloha.Aloha.create(55, data=20)
     #controllers = [aloha.AlohaOben(5, i) for i in range(amount)]
 
@@ -74,15 +72,23 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
 
     random.seed(42)
     random.shuffle(evs)
-
+    # TODO node_id von evs als data mitgeben
+    controllers = []
+    for i in range(amount):
+        print(evs[i])
+        controllers.append(aloha.AlohaOben(data=i))
     evflexs = [flexev.FlexEV(node_id=node_id, max_charge_rate=charge_speed).children[0] for node_id in evs]
+    print("len(evflexs)", len(evflexs))
+    print("len(evs)", len(evs))
+    print(evflexs[0])
+    print(evs[0])
     #print("len(evflex):", len(evflexs))
     connect_cs_to_grid(world, controllers, evflexs, grid)
 
     if influxdb:
         influxdb_collector_sim = world.start('InfluxDB', step_size=60)
         influxdb_collector = influxdb_collector_sim.Database(
-            db_name='mosaik_fair',
+            db_name='mosaik_fair_2',
             run_id=str(uuid.uuid4()),
             start_timestamp=START.replace(' ', 'T'),
             time_unit='s',
@@ -139,14 +145,18 @@ def connect_cs_to_grid(world, controllers, evs, grid):
     # print("c_data:", c_data)
     for c in controllers:
         node_id = c_data[c]['node_id']
-        # print("node_id:", node_id)
         index = list(buses.keys())
-        # print(index)
-        # print(index)
-        world.connect(buses[index[node_id]], c, 'Vm', 'Va', 'Q')
+        world.connect(buses[index[node_id]], c, 'Vm', 'Va', 'Q', 'P')
+
+    # Connect branch to Controller
+    branches = filter(lambda e: e.type == 'Branch', grid)
+    branches = {b.eid.split('-')[1]: b for b in branches}
+    for c in controllers:
+        node_id = c_data[c]['node_id']
+        index = list(branches.keys())
+        world.connect(branches[index[node_id]], c, 'I_real', 'I_imag')
 
     # connect controller to evs
-    # print("evs:", evs)
     ev_data = world.get_data(evs, 'node_id')
     # print("ev_data:", ev_data)
     ev_by_node_id = {ev_data[ev]['node_id']: [] for ev in evs}
@@ -173,6 +183,7 @@ def connect_cs_to_grid(world, controllers, evs, grid):
     for ev in evs:
         node_id = ev_data[ev]['node_id']
         world.connect(ev, buses[node_id], 'P', 'Q', time_shifted=True, initial_data={'P': 0.0, 'Q': 0.0})
+
 
 
 
