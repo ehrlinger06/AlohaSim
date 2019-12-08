@@ -90,3 +90,20 @@ meta = {
             return time + 60 #(self.next_row[0].timestamp - date.timestamp)
         else:
             return float('inf')
+
+
+        if getAttr('available', inputs):
+            arrival = getAttr('arrival_time', inputs)
+            departure = getAttr('departure_time', inputs)
+            currentTime = (steps - self.step_size) / self.step_size
+
+            current_soc = getAttr('current_soc', inputs)
+            # amount of power needed
+            neededcharge = BATTERY_CAPACITY * (current_soc / 100)
+            neededTime = neededcharge / calcPower(inputs)
+            neededTimeBuffered = neededTime * (1 + BUFFER_FACTOR)
+
+            # time gone since arrival
+            timeSince = currentTime - arrival
+            # time until depature
+            timeUntil = departure - currentTime

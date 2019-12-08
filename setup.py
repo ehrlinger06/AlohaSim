@@ -28,7 +28,7 @@ DURATION = DIFF.total_seconds()
 GRID_NAME = 'ieee906'
 
 scenarios = [5]
-speeds = [200]
+speeds = [96]
 limits = [250]
 methods = ["Aloha?"]
 
@@ -48,7 +48,7 @@ def main():
     create_scenario(world, GRID_NAME, scenarios[0], charge_speed=speeds[0], method=methods[0], limit=limits[0],
                     seed=42,
                     influxdb=True)
-    # world.run(until=DURATION)  # As fast as possilbe
+    world.run(until=DURATION)  # As fast as possilbe
     world.shutdown()  # delete world again
 
 
@@ -58,37 +58,26 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
     # Start simulators
     flexev = world.start("FlexEVSim", sim_start=START)
     aloha = world.start("AlohaSim", step_size=60)
-    amount = 55
-
-
-    #controllers = aloha.Aloha.create(55, data=20)
-    #controllers = [aloha.AlohaOben(5, i) for i in range(amount)]
-
-    #print("len(controllers):", len(controllers))
-    #print(controllers[0])
 
     grid, houses = ieee906.connect_ieee906(world, start_time=START)
     evs = ieee906.get_load_busses()
 
     random.seed(42)
     random.shuffle(evs)
-    # TODO node_id von evs als data mitgeben
-    controllers = []
-    for i in range(amount):
-        print(evs[i])
-        controllers.append(aloha.AlohaOben(data=i))
+
+    #controllers = []
+    #for node_id in evs:
+    #    controllers.append(aloha.AlohaOben(node_id=node_id))
+    controllers = [aloha.AlohaOben(node_id=node_id) for node_id in evs]
+
     evflexs = [flexev.FlexEV(node_id=node_id, max_charge_rate=charge_speed).children[0] for node_id in evs]
-    print("len(evflexs)", len(evflexs))
-    print("len(evs)", len(evs))
-    print(evflexs[0])
-    print(evs[0])
-    #print("len(evflex):", len(evflexs))
+
     connect_cs_to_grid(world, controllers, evflexs, grid)
 
     if influxdb:
         influxdb_collector_sim = world.start('InfluxDB', step_size=60)
         influxdb_collector = influxdb_collector_sim.Database(
-            db_name='mosaik_fair_2',
+            db_name='aloha_test_1',
             run_id=str(uuid.uuid4()),
             start_timestamp=START.replace(' ', 'T'),
             time_unit='s',
@@ -117,10 +106,6 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
             node_id = bus.eid.split('-')[1]
             influxdb_collector_sim.add_component_tag(bus.full_id, 'node_id', node_id)
 
-        # Store data on loading in the grid
-        # controller.util.connect_many_to_one(world, trafo, influxdb_collector, 'P_from', 'Q_from', 'U_s')
-        # all_ids = all_ids + [e.full_id for e in trafo]
-
         # Add General Tag to all entities
         influxdb_collector_sim.add_component_tag(all_ids, 'scenario', str(scenario))
         influxdb_collector_sim.add_component_tag(all_ids, 'speed', str(charge_speed))
@@ -139,40 +124,21 @@ def connect_cs_to_grid(world, controllers, evs, grid):
     # Connect bus to controller
     buses = filter(lambda e: e.type == 'PQBus', grid)
     buses = {b.eid.split('-')[1]: b for b in buses}
-    ##print(len(buses))
-    ##print(buses)
     c_data = world.get_data(controllers, 'node_id')
-    # print("c_data:", c_data)
     for c in controllers:
         node_id = c_data[c]['node_id']
-        index = list(buses.keys())
-        world.connect(buses[index[node_id]], c, 'Vm', 'Va', 'Q', 'P')
-
-    # Connect branch to Controller
-    branches = filter(lambda e: e.type == 'Branch', grid)
-    branches = {b.eid.split('-')[1]: b for b in branches}
-    for c in controllers:
-        node_id = c_data[c]['node_id']
-        index = list(branches.keys())
-        world.connect(branches[index[node_id]], c, 'I_real', 'I_imag')
+        world.connect(buses[node_id], c, 'Vm', 'Va')
 
     # connect controller to evs
     ev_data = world.get_data(evs, 'node_id')
-    # print("ev_data:", ev_data)
     ev_by_node_id = {ev_data[ev]['node_id']: [] for ev in evs}
-    # print("ev_by_node_id before:", ev_by_node_id)
     for ev in evs:
         node_id = ev_data[ev]['node_id']
         ev_by_node_id[node_id].append(ev)
 
-    # print("ev_by_node_id after:", ev_by_node_id)
-    #print(ev_by_node_id)
     for c in controllers:
         node_id = c_data[c]['node_id']
-        # print("nodeID:", node_id)
-        index = list(ev_by_node_id.keys())
-        # print("index:", index)
-        ev = ev_by_node_id[index[node_id]].pop(0)
+        ev = ev_by_node_id[node_id].pop(0)
         world.connect(c, ev, ('P_out', 'P'), ('Q_out', 'Q'), ('Vm', 'voltage'))
         world.connect(ev, c, 'arrival_time', 'departure_time', 'available', 'current_soc', 'possible_charge_rate',
                       time_shifted=True,
@@ -183,8 +149,6 @@ def connect_cs_to_grid(world, controllers, evs, grid):
     for ev in evs:
         node_id = ev_data[ev]['node_id']
         world.connect(ev, buses[node_id], 'P', 'Q', time_shifted=True, initial_data={'P': 0.0, 'Q': 0.0})
-
-
 
 
 main()
