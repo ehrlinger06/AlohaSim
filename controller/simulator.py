@@ -1,5 +1,6 @@
-import mosaik_api
 import random
+
+import mosaik_api
 
 MODEL_NAME = 'Aloha'
 # TODO currently set here, can come from setup.py
@@ -8,6 +9,7 @@ BATTERY_CAPACITY = 40000
 BUFFER_FACTOR_LOW = 0.25
 BUFFER_FACTOR_HIGH = 0.5
 NORM_VOLTAGE = 230
+# TODO charging time in Sekunden, wartezeit in minuten (Schlecht nehme ich an)
 CHARGING_DURATION_PER_CONNECTION = 1200
 MIDDLE_CHARGING_POWER = 9990
 LARGE_DISTANCE = 5
@@ -78,7 +80,6 @@ class AlohaOben:
         self.data = node_id
         self.step_size = 60
         self.counter = 0
-        # self.val_out = self.data[0]
         self.node_id = node_id
         self.voltage = 230.0
         self.P_out = 0.0
@@ -93,6 +94,7 @@ class AlohaOben:
 
     def step(self, steps, inputs):
         # self.setP_out(inputs)
+        # TODO was wenn soc 100% aber leistung liegt an(liegt die noch an
         if getAttr('available', inputs) & (getAttr('current_soc', inputs) < 100.0):
             if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
                 self.startCharging(steps, inputs)
@@ -112,13 +114,15 @@ class AlohaOben:
         else:
             self.P_out = 0.0
 
+    # sets P_out to zero, sets chargingTime to Zero, sets chargingFLAG to false, calculates waiting period
     def stopCharging(self, inputs, steps):
         self.P_out = 0.0
         self.chargingFLAG = False
         self.calculateWaitingTime(inputs, steps)
-        # TODO calculate suitable waiting time...
+        # TODO calculate suitable waiting time... ?DONE?
         self.chargingTime = 0
 
+    # calculates power, sets chargingFLAG newCharging and chargingTime, stores Vm value
     def startCharging(self, steps, inputs):
         P = calcPower(inputs)
         # was wenn P == 0
@@ -132,6 +136,7 @@ class AlohaOben:
             self.newCharging = False
             self.stopCharging(inputs, steps)
 
+    # calculates current power, lowers chargingtime, initiates charging stop if voltage is too low
     def charging(self, steps, inputs):
         P = calcPower(inputs)
         if P > 0:
@@ -140,15 +145,17 @@ class AlohaOben:
         else:
             self.stopCharging(inputs, steps)
 
+    # checks if charging continues beyond the first circle, by looking at occured voltage drop
     def continueAfterFirstStep(self, steps, inputs):
         VmDifference = getAttr('Vm', inputs) / self.VmOLD
         self.newCharging = False
-        # TODO reasonable value(11.5V are 95% of 230V)
+        # TODO reasonable value(11.5V are 5% of 230V)
         if VmDifference >= 0.95:  # voltage drop within limit, continue charging
             self.charging(steps, inputs)
         else:  # voltage drop too significant, stop charging
             self.stopCharging(inputs, steps)
 
+    # calculates the waitingTime before the next connect, based on a sorting into four scenarios
     def calculateWaitingTime(self, inputs, steps):
         arrival = getAttr('arrival_time', inputs)
         departure = getAttr('departure_time', inputs)
@@ -180,9 +187,9 @@ class AlohaOben:
         # time until depature
         timeUntil = departure - currentTime
 
-        # timezone mit priority
+        # # timezone mit priority
         # 0. power too low
-
+        # TODO was tun wenn power zu niedrig
         # 1. timeUntil High enough for BUFFER_FACTOR_HIGH => lowest Priority, highest waiting time
         if timeUntil > neededTimeBuffered_HIGH:
             # 12.5% Chance to connect
@@ -191,7 +198,8 @@ class AlohaOben:
                 self.waitingTime = 0
             else:
                 # upper_border = int((timeUntil-neededTimeBuffered_HIGH) / 2)
-                self.waitingTime = random.randrange(0, max(int(neededTimeBuffered_HIGH), (SMALL_DISTANCE + 1)), SMALL_DISTANCE)
+                self.waitingTime = random.randrange(0, max(int(neededTimeBuffered_HIGH), (SMALL_DISTANCE + 1)),
+                                                    SMALL_DISTANCE)
         # 2. timeUntil High enough for BUFFER_FACTOR_LOW => second lowest waiting Priority, medium waiting time
         if (timeUntil > neededTimeBuffered_LOW) & (timeUntil < neededTimeBuffered_HIGH):
             # 20% Chance to connect
@@ -200,7 +208,8 @@ class AlohaOben:
                 self.waitingTime = 0
             else:
                 # upper_border = int((timeUntil - neededTimeBuffered_LOW) / 2)
-                self.waitingTime = random.randrange(0, max(int(neededTimeBuffered_LOW), (LARGE_DISTANCE + 1)), LARGE_DISTANCE)
+                self.waitingTime = random.randrange(0, max(int(neededTimeBuffered_LOW), (LARGE_DISTANCE + 1)),
+                                                    LARGE_DISTANCE)
         # 3. timeUntil too low, current_soc over 80% => second highest priority, low to zero waiting time
         if (timeUntil < neededTimeBuffered_LOW) & (getAttr('current_soc', inputs) >= 80):
             # 33% Chance to connect
