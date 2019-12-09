@@ -1,12 +1,17 @@
 import mosaik_api
+import random
 
 MODEL_NAME = 'Aloha'
 # TODO currently set here, can come from setup.py
 BATTERY_CAPACITY = 40000
 # TODO Hier wäre experimentierbedarf?
-BUFFER_FACTOR = 0.25
+BUFFER_FACTOR_LOW = 0.25
+BUFFER_FACTOR_HIGH = 0.5
 NORM_VOLTAGE = 230
 CHARGING_DURATION_PER_CONNECTION = 1200
+MIDDLE_CHARGING_POWER = 9990
+LARGE_DISTANCE = 5
+SMALL_DISTANCE = 2
 
 meta = {
     'models': {
@@ -54,10 +59,10 @@ def calcPower(inputs):
 def calculatePowerIndex(Vm):
     if voltageHighEnough(Vm):
         powerIndex = 20 * Vm / NORM_VOLTAGE - 17.6
-        if powerIndex >= 0 & powerIndex <= 1:
+        if (powerIndex >= 0.0) & (powerIndex <= 1.0):
             return powerIndex
         elif powerIndex > 1:
-            return 1
+            return 1.0
     return 0
 
 
@@ -80,56 +85,138 @@ class AlohaOben:
         self.Q_out = 0.0
         self.Vm = 230.0
         self.id = id
+        self.chargingFLAG = False
+        self.newCharging = False
+        self.waitingTime = 0
+        self.chargingTime = 0
+        self.VmOLD = 0
 
     def step(self, steps, inputs):
         # self.setP_out(inputs)
-        self.charging = True
-        if getAttr('available', inputs):
-            if (not self.charging) & self.waitingTime == 0:
-                P = calcPower(inputs)
-                # was wenn P == 0
-                if P > 0:
-                    self.P_out = P;
-                    self.newCharging = True
-                    self.VmOLD = getAttr('Vm', inputs)
-                    self.charging = True
-                    self.chargingTime = CHARGING_DURATION_PER_CONNECTION
-            elif (not self.charging) & self.waitingTime > 0:
-                self.waitingTime = self.waitingTime - self.step_size
-            elif self.charging & self.newCharging:
-                VmDifference = getAttr('Vm', inputs) / self.VmOLD
-                # TODO reasonable value(11.5V are 95% of 230V)
-                if VmDifference >= 0.95:
-                    self.newCharging = False
-                    self.chargingTime = self.chargingTime - self.step_size
-                    # was wenn P == 0
-                else:
-                    print()
-                    # leistung wegnehmen
-                    # wartezeit berechnen
-            elif self.charging & self.chargingTime > 0:
-                print()
-                # leistung berechnen
-                # ladezeit erniedrigen
-                # wass wenn P ==0
-            elif self.charging & self.chargingTime == 0:
-                print()
-                # leistung wegnehmen
-                # wartezeit berechnen
-
-
-
-
-
-
-        else:
-            print()
+        if getAttr('available', inputs) & (getAttr('current_soc', inputs) < 100.0):
+            if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
+                self.startCharging(steps, inputs)
+            elif (not self.chargingFLAG) & (self.waitingTime > 0):  # not charging right now, waiting time not yet over
+                self.waitingTime -= 1
+            elif self.chargingFLAG & (self.chargingTime > 0) & (not self.newCharging):  # charging time not over, not in
+                # first step
+                self.charging(steps, inputs)
+            elif self.chargingFLAG & self.newCharging:  # charging just finished first step after beginning
+                self.continueAfterFirstStep(steps, inputs)
+            elif self.chargingFLAG & (self.chargingTime == 0):  # charging, but charging time is now over
+                self.stopCharging(inputs, steps)
 
     def setP_out(self, inputs):
         if voltageHighEnough(getAttr('Vm', inputs)):
             self.P_out = calcPower(inputs)
         else:
             self.P_out = 0.0
+
+    def stopCharging(self, inputs, steps):
+        self.P_out = 0.0
+        self.chargingFLAG = False
+        self.calculateWaitingTime(inputs, steps)
+        # TODO calculate suitable waiting time...
+        self.chargingTime = 0
+
+    def startCharging(self, steps, inputs):
+        P = calcPower(inputs)
+        # was wenn P == 0
+        if P > 0:
+            self.P_out = P;
+            self.newCharging = True
+            self.VmOLD = getAttr('Vm', inputs)
+            self.chargingFLAG = True
+            self.chargingTime = CHARGING_DURATION_PER_CONNECTION
+        else:
+            self.newCharging = False
+            self.stopCharging(inputs, steps)
+
+    def charging(self, steps, inputs):
+        P = calcPower(inputs)
+        if P > 0:
+            self.P_out = P
+            self.chargingTime -= self.step_size
+        else:
+            self.stopCharging(inputs, steps)
+
+    def continueAfterFirstStep(self, steps, inputs):
+        VmDifference = getAttr('Vm', inputs) / self.VmOLD
+        self.newCharging = False
+        # TODO reasonable value(11.5V are 95% of 230V)
+        if VmDifference >= 0.95:  # voltage drop within limit, continue charging
+            self.charging(steps, inputs)
+        else:  # voltage drop too significant, stop charging
+            self.stopCharging(inputs, steps)
+
+    def calculateWaitingTime(self, inputs, steps):
+        arrival = getAttr('arrival_time', inputs)
+        departure = getAttr('departure_time', inputs)
+        currentTime = (steps - self.step_size) / self.step_size
+
+        current_soc = getAttr('current_soc', inputs)
+        # amount of power needed
+        if current_soc < 100:
+            if calcPower(inputs) > 0:
+                neededcharge = BATTERY_CAPACITY * (1 - (current_soc / 100))
+                # in hours
+                neededTimeHours = neededcharge / calcPower(inputs)
+                # in Minutes
+                neededTime = int(neededTimeHours * 60)
+                neededTimeBuffered_LOW = neededTime * (1 + BUFFER_FACTOR_LOW)
+                neededTimeBuffered_HIGH = neededTime * (1 + BUFFER_FACTOR_HIGH)
+            else:
+                voltageTooLow = True
+                neededcharge = BATTERY_CAPACITY * (1 - (current_soc / 100))
+                neededTimeHours = neededcharge / MIDDLE_CHARGING_POWER
+                neededTime = int(neededTimeHours * 60)
+                neededTimeBuffered_LOW = neededTime * (1 + BUFFER_FACTOR_LOW)
+                neededTimeBuffered_HIGH = neededTime * (1 + BUFFER_FACTOR_HIGH)
+        else:
+            self.waitingTime = departure - currentTime
+
+        # time gone since arrival
+        timeSince = currentTime - arrival
+        # time until depature
+        timeUntil = departure - currentTime
+
+        # timezone mit priority
+        # 0. power too low
+
+        # 1. timeUntil High enough for BUFFER_FACTOR_HIGH => lowest Priority, highest waiting time
+        if timeUntil > neededTimeBuffered_HIGH:
+            # 12.5% Chance to connect
+            connectingProbability = random.randrange(1, 9, 1)  # 1 out of eight cases
+            if connectingProbability == 1:
+                self.waitingTime = 0
+            else:
+                # upper_border = int((timeUntil-neededTimeBuffered_HIGH) / 2)
+                self.waitingTime = random.randrange(0, max(int(neededTimeBuffered_HIGH), (SMALL_DISTANCE + 1)), SMALL_DISTANCE)
+        # 2. timeUntil High enough for BUFFER_FACTOR_LOW => second lowest waiting Priority, medium waiting time
+        if (timeUntil > neededTimeBuffered_LOW) & (timeUntil < neededTimeBuffered_HIGH):
+            # 20% Chance to connect
+            connectingProbability = random.randrange(1, 6, 1)  # 1 out of five cases
+            if connectingProbability == 1:
+                self.waitingTime = 0
+            else:
+                # upper_border = int((timeUntil - neededTimeBuffered_LOW) / 2)
+                self.waitingTime = random.randrange(0, max(int(neededTimeBuffered_LOW), (LARGE_DISTANCE + 1)), LARGE_DISTANCE)
+        # 3. timeUntil too low, current_soc over 80% => second highest priority, low to zero waiting time
+        if (timeUntil < neededTimeBuffered_LOW) & (getAttr('current_soc', inputs) >= 80):
+            # 33% Chance to connect
+            connectingProbability = random.randrange(1, 4, 1)  # 1 out of three cases
+            if connectingProbability == 1:
+                self.waitingTime = 0
+            else:
+                self.waitingTime = self.step_size * connectingProbability
+        # 4. timeUntil too low, current_soc under 80% => highest priority, very low to zero waiting time
+        if (timeUntil < neededTimeBuffered_LOW) & (getAttr('current_soc', inputs) < 80):
+            # 50% Chance to connect
+            connectingProbability = random.randrange(1, 3, 1)  # 1 out of two cases
+            if connectingProbability == 1:
+                self.waitingTime = 0
+            else:
+                self.waitingTime = self.step_size
 
 
 class AlohaSim(mosaik_api.Simulator):

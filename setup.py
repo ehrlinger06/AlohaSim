@@ -77,7 +77,7 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
     if influxdb:
         influxdb_collector_sim = world.start('InfluxDB', step_size=60)
         influxdb_collector = influxdb_collector_sim.Database(
-            db_name='aloha_test_1',
+            db_name='aloha_test_2',
             run_id=str(uuid.uuid4()),
             start_timestamp=START.replace(' ', 'T'),
             time_unit='s',
