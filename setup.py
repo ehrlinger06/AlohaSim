@@ -30,7 +30,9 @@ GRID_NAME = 'ieee906'
 scenarios = [5]
 speeds = [96]
 limits = [250]
-methods = ["Aloha?"]
+# "baseLine", "voltageController_VDE", "voltageController_OWN", "tau_VDE", "tau_own"
+methods = ["baseLine"]
+
 
 
 def get_free_tcp_port():
@@ -57,7 +59,7 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
 
     # Start simulators
     flexev = world.start("FlexEVSim", sim_start=START)
-    aloha = world.start("AlohaSim", step_size=60)
+    aloha = world.start("AlohaSim", step_size=60, method='baseline')
 
     grid, houses = ieee906.connect_ieee906(world, start_time=START)
     evs = ieee906.get_load_busses()
