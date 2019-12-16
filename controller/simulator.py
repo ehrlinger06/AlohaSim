@@ -1,6 +1,7 @@
 import random
 import versions.adjustedVoltageController_VDE4100 as voltageController_VDE
 import versions.adjustedPowerController_own as voltageController_OWN
+import versions.tau_vde as tau_vde
 
 import versions
 
@@ -46,7 +47,7 @@ class AlohaSim(mosaik_api.Simulator):
         if self.method == 'voltageController_OWN':
             self.models[eid] = voltageController_OWN.AdjustedVoltageController(node_id, id=i + start_idx)
         if self.method == 'tau_VDE':
-            self.models[eid] = versions.tau_vde(node_id, id=i + start_idx)
+            self.models[eid] = tau_vde.TauVde(node_id, id=i + start_idx)
         # "tau_VDE", "tau_own"
 
         return [{'eid': eid, 'type': model}]

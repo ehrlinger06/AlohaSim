@@ -34,6 +34,7 @@ class BaseLine:
         self.chargingTime = 0
         self.VmOLD = 0
         self.P_old = 0.0
+        self.P_new = 0.0
 
     def getAtt(self, attr, inputDict):
         attrDict = inputDict.get(attr)

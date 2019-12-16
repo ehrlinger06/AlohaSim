@@ -21,17 +21,17 @@ sim_config = {
 
 }
 
-START = '2019-11-18 00:00:00'
-END = '2019-11-20 00:00:00'
+START = '2019-11-18 10:00:00'
+END = '2019-11-18 11:00:00'
 DIFF = datetime.fromisoformat(END.replace(' ', 'T')) - datetime.fromisoformat(START.replace(' ', 'T'))
 DURATION = DIFF.total_seconds()
 GRID_NAME = 'ieee906'
 
-scenarios = [5]
+seeds = [42, 24, 11, 34]
 speeds = [96]
 limits = [250]
 # "baseLine", "voltageController_VDE", "voltageController_OWN", "tau_VDE", "tau_own"
-methods = ["tau_VDE"]
+methods = ["baseLine", "tau_VDE", "voltageController_VDE", "voltageController_OWN"]
 
 
 
@@ -44,17 +44,19 @@ def get_free_tcp_port():
 
 
 def main():
-    print("in Main")
-    mosaik_config = {'addr': ('127.0.0.1', get_free_tcp_port())}
-    world = mosaik.World(sim_config, mosaik_config=mosaik_config)
-    create_scenario(world, GRID_NAME, scenarios[0], charge_speed=speeds[0], method=methods[0], limit=limits[0],
-                    seed=42,
+    for i in range(len(seeds)):
+        for j in range(len(methods)):
+
+            mosaik_config = {'addr': ('127.0.0.1', get_free_tcp_port())}
+            world = mosaik.World(sim_config, mosaik_config=mosaik_config)
+            create_scenario(world, GRID_NAME, charge_speed=speeds[0], method=methods[j], limit=limits[0],
+                    seed=seeds[i],
                     influxdb=True)
-    world.run(until=DURATION)  # As fast as possilbe
-    world.shutdown()  # delete world again
+            world.run(until=DURATION)  # As fast as possilbe
+            world.shutdown()  # delete world again
 
 
-def create_scenario(world, grid_name, scenario, charge_speed, method, limit, seed, influxdb=True):
+def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxdb=True):
     grid_file = 'data/%s.json' % grid_name
 
     # Start simulators
@@ -109,16 +111,10 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
             influxdb_collector_sim.add_component_tag(bus.full_id, 'node_id', node_id)
 
         # Add General Tag to all entities
-        influxdb_collector_sim.add_component_tag(all_ids, 'scenario', str(scenario))
+        influxdb_collector_sim.add_component_tag(all_ids, 'seed', str(seed))
         influxdb_collector_sim.add_component_tag(all_ids, 'speed', str(charge_speed))
         influxdb_collector_sim.add_component_tag(all_ids, 'limit', str(limit))
         influxdb_collector_sim.add_component_tag(all_ids, 'method', method)
-
-        if method == 'BASE':
-            # add tags for all configs, as they do not differ
-            [influxdb_collector_sim.add_component_tag(all_ids, 'scenario', str(s)) for s in scenarios]
-            [influxdb_collector_sim.add_component_tag(all_ids, 'speed', str(sp)) for sp in speeds]
-            [influxdb_collector_sim.add_component_tag(all_ids, 'limit', str(l)) for l in limits]
 
 
 def connect_cs_to_grid(world, controllers, evs, grid):
