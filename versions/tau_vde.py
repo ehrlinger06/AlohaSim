@@ -1,7 +1,7 @@
 import versions.adjustedVoltageController_VDE4100 as current
 
 
-class TauVde(current.AdjustedVoltageController):
+class TauVde(current):
 
     def calcPower(self, inputs):
         available = self.getAtt('available', inputs)

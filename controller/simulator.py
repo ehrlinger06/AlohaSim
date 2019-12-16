@@ -1,11 +1,23 @@
 import random
-import versions.BaseLine as baseLine
 import versions.adjustedVoltageController_VDE4100 as voltageController_VDE
 import versions.adjustedPowerController_own as voltageController_OWN
+
+import versions
 
 import mosaik_api
 
 MODEL_NAME = 'Aloha'
+meta = {
+    'models': {
+        'AlohaOben': {
+            'public': True,
+            'any_inputs': True,
+            'params': ['node_id', 'id'],
+            'attrs': ['node_id', 'voltage', 'Vm', 'Va', 'P_out', 'Q_out', 'arrival_time', 'departure_time',
+                      'available', 'current_soc', 'possible_charge_rate', 'Q', 'P'],
+        },
+    }
+}
 
 
 class AlohaSim(mosaik_api.Simulator):
@@ -15,7 +27,7 @@ class AlohaSim(mosaik_api.Simulator):
         self._entities = {}
         self.step_size = 60
         self.models = {}
-        self.method = 'baseline'
+        self.method = 'baseLine'
 
     def init(self, sid, step_size, method):
         self.step_size = step_size
@@ -26,12 +38,15 @@ class AlohaSim(mosaik_api.Simulator):
         start_idx = len(self._eids)
         i = len(self.models)
         eid = 'Aloha_%s' % (i + start_idx)
-        if self.method == 'baseline':
-            self.models[eid] = baseLine.BaseLine(node_id, id=i + start_idx)
+        if self.method == 'baseLine':
+            self.models[eid] = versions.BaseLineClass.BaseLine(node_id, id=i + start_idx)
+            # baseLine.BaseLine(node_id, id=i + start_idx)
         if self.method == 'voltageController_VDE':
             self.models[eid] = voltageController_VDE.AdjustedVoltageController(node_id, id=i + start_idx)
         if self.method == 'voltageController_OWN':
             self.models[eid] = voltageController_OWN.AdjustedVoltageController(node_id, id=i + start_idx)
+        if self.method == 'tau_VDE':
+            self.models[eid] = versions.tau_vde(node_id, id=i + start_idx)
         # "tau_VDE", "tau_own"
 
         return [{'eid': eid, 'type': model}]

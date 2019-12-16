@@ -1,9 +1,9 @@
-from versions.BaseLine import BaseLine
+from versions.BaseLineClass import BaseLine
 
 NORM_VOLTAGE = 230
 
 
-class AdjustedVoltageController(BaseLine.BaseLine):
+class AdjustedVoltageController(BaseLine):
 
     def calcPower(self, inputs):
         available = self.getAtt('available', inputs)

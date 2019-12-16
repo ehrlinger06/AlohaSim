@@ -31,7 +31,7 @@ scenarios = [5]
 speeds = [96]
 limits = [250]
 # "baseLine", "voltageController_VDE", "voltageController_OWN", "tau_VDE", "tau_own"
-methods = ["baseLine"]
+methods = ["tau_VDE"]
 
 
 
@@ -59,7 +59,7 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
 
     # Start simulators
     flexev = world.start("FlexEVSim", sim_start=START)
-    aloha = world.start("AlohaSim", step_size=60, method='baseline')
+    aloha = world.start("AlohaSim", step_size=60, method=method)
 
     grid, houses = ieee906.connect_ieee906(world, start_time=START)
     evs = ieee906.get_load_busses()
@@ -79,7 +79,7 @@ def create_scenario(world, grid_name, scenario, charge_speed, method, limit, see
     if influxdb:
         influxdb_collector_sim = world.start('InfluxDB', step_size=60)
         influxdb_collector = influxdb_collector_sim.Database(
-            db_name='aloha_test_2',
+            db_name='aloha_test_3',
             run_id=str(uuid.uuid4()),
             start_timestamp=START.replace(' ', 'T'),
             time_unit='s',
