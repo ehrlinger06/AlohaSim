@@ -67,7 +67,6 @@ class CSV(mosaik_api.Simulator):
 
         # Check date
         date = data[0]
-        print("time:", time)
         expected_date = self.start_date.replace(seconds=time)
         # set expected date always to start date
         expected_date = expected_date.replace(year=YEAR, month=MONTH, day=DAY)

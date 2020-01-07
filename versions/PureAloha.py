@@ -17,7 +17,7 @@ meta = {
 }
 
 
-class BaseLine:
+class PureAloha_Class:
     def __init__(self, node_id, id, seed):
         self.data = node_id
         self.step_size = 60
@@ -81,10 +81,8 @@ class BaseLine:
         else:
             return False
 
-    def step(self, simTime, inputs, arrivers, participants):
-        self.arrivers = arrivers
+    def step(self, simTime, inputs, participants):
         self.participants = participants
-        self.arriverFlag = (self.getAtt('arrival_time', inputs) == ((simTime - self.step_size) / self.step_size))
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
             if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
                 self.charging(inputs)
@@ -99,17 +97,12 @@ class BaseLine:
     def charging(self, inputs):
         P = self.calcPower(inputs)
 
-        if self.arriverFlag & self.arrivers > 2:
-            self.waitingTime = self.calculatePreWaitingTime()
-            if self.waitingTime == 0 & P > 0:
-                self.P_out = P
-                self.chargingFLAG = True
-                self.arriverFlag = False
-        elif P > 0:
+        if P > 0:
             self.P_out = P
             self.chargingFLAG = True
             self.arriverFlag = False
         else:
+            self.P_out = 0.0
             self.chargingFLAG = False
             self.arriverFlag = False
             self.waitingTime = self.calculateWaitingTime()
@@ -117,9 +110,3 @@ class BaseLine:
     def calculateWaitingTime(self):
         random.seed(self.seed)
         return random.randrange(0, max(self.participants, 2), 1)
-
-    def calculatePreWaitingTime(self):
-        random.seed(self.seed)
-        return random.randrange(0, self.arrivers, 1)
-
-
