@@ -38,6 +38,7 @@ class PureAloha_Class:
         self.arrivers = 0
         self.participants = 0
         self.seed = seed
+        self.time = 0
 
     def getAtt(self, attr, inputDict):
         attrDict = inputDict.get(attr)
@@ -83,6 +84,7 @@ class PureAloha_Class:
 
     def step(self, simTime, inputs, participants):
         self.participants = participants
+        self.time = (simTime - self.step_size) / self.step_size
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
             if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
                 self.charging(inputs)

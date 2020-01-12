@@ -1,4 +1,4 @@
-from versions.BaseLineClass import BaseLine
+from versions.SA_waitingArrivers import BaseLine
 
 NORM_VOLTAGE = 230
 
