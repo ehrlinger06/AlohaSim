@@ -46,7 +46,7 @@ class AlohaSim(mosaik_api.Simulator):
         if self.method == 'pure':
             self.models[eid] = pureAloha.PureAloha_Class(node_id, id=i + start_idx, seed=seed)
         if self.method == 'baseLine':
-            self.models[eid] = versions.SA_waitingArrivers.BaseLine(node_id, id=i + start_idx, seed=seed)
+            self.models[eid] = versions.SA_preWaitingArrivers.BaseLine(node_id, id=i + start_idx, seed=seed)
         if self.method == 'voltageController_VDE':
             self.models[eid] = voltageController_VDE.AdjustedVoltageController(node_id, id=i + start_idx, seed=seed)
         if self.method == 'voltageController_OWN':
@@ -56,7 +56,7 @@ class AlohaSim(mosaik_api.Simulator):
         if self.method == 'tau_OWN':
             self.models[eid] = versions.tau_own.TauOwn(node_id, id=i + start_idx, seed=seed)
         if self.method == 'lowestVoltage_Base':
-            self.models[eid] = versions.SA_waitingArrivers.BaseLine(node_id, id=i + start_idx, seed=seed)
+            self.models[eid] = versions.SA_preWaitingArrivers.BaseLine(node_id, id=i + start_idx, seed=seed)
 
         # "tau_VDE", "tau_own"
 

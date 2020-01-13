@@ -100,7 +100,7 @@ class BaseLine:
         P = self.calcPower(inputs)
 
         if self.arriverFlag & self.arrivers > 2:
-            self.waitingTime = self.calculatePreWaitingTime()
+            self.waitingTime = self.calculatePreWaitingTime(inputs)
             if self.waitingTime == 0 & P > 0:
                 self.P_out = P
                 self.chargingFLAG = True
@@ -118,7 +118,7 @@ class BaseLine:
         random.seed(self.seed)
         return random.randrange(0, max(self.participants, 2), 1)
 
-    def calculatePreWaitingTime(self):
+    def calculatePreWaitingTime(self, inputs):
         random.seed(self.seed)
         return random.randrange(0, self.arrivers, 1)
 
