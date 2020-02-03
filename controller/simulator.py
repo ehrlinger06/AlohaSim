@@ -4,6 +4,14 @@ import versions.adjustedPowerController_own as voltageController_OWN
 import versions.tau_vde as tau_vde
 import versions.SlottedAloha as pureAloha
 import versions.onlyVDE as onlyVDE
+import versions.SA_preWaitingSoC as SlottedAloha_preWaitingSoC
+import versions.SA_disconnectSoC as SlottedAloha_disconnectSoC
+import versions.SA_disconnect5050 as SlottedAloha_disconnect5050
+import versions.SA_waitingTime as SlottedAloha_waitingTime
+import versions.SA_waitingTime_VDE as SlottedAloha_waitingTime_VDE
+import versions.SA_waitingTime_tau as SlottedAloha_waitingTime_tau
+import versions.SA_waitingTime_VDE_tau as SlottedAloha_waitingTime_VDE_tau
+import versions.TrafoLoad_noEVs as TrafoLoad
 
 import versions
 
@@ -17,7 +25,7 @@ meta = {
             'any_inputs': True,
             'params': ['node_id', 'id', 'seed'],
             'attrs': ['node_id', 'voltage', 'Vm', 'Va', 'P_out', 'Q_out', 'arrival_time', 'departure_time',
-                      'available', 'current_soc', 'possible_charge_rate', 'Q', 'P'],
+                      'available', 'current_soc', 'possible_charge_rate', 'Q', 'P', 'P_from', 'Q_from', 'U_s'],
         },
     }
 }
@@ -43,10 +51,44 @@ class AlohaSim(mosaik_api.Simulator):
         eid = 'Aloha_%s' % (i + start_idx)
         if self.method == 'onlyVDE':
             self.models[eid] = onlyVDE.onlyVDE(node_id, id=i + start_idx, seed=seed)
-        if self.method == 'pure':
-            self.models[eid] = pureAloha.PureAloha_Class(node_id, id=i + start_idx, seed=seed)
-        if self.method == 'baseLine':
-            self.models[eid] = versions.SA_preWaitingArrivers.BaseLine(node_id, id=i + start_idx, seed=seed)
+
+        if self.method == 'SlottedAloha':
+            self.models[eid] = pureAloha.SlottedAloha_Class(node_id, id=i + start_idx, seed=seed)
+
+        if self.method == 'SlottedAloha_lowestGlobalVoltage':
+            self.models[eid] = versions.SA_preWaitingArrivers.SlottedAloha_preWaitingArrivers(node_id, id=i + start_idx,
+                                                                                              seed=seed)
+
+        if self.method == 'SlottedAloha_preWaitingArrivers':
+            self.models[eid] = versions.SA_preWaitingArrivers.SlottedAloha_preWaitingArrivers(node_id, id=i + start_idx,
+                                                                                              seed=seed)
+        if self.method == 'SlottedAloha_preWaitingSoC':
+            self.models[eid] = SlottedAloha_preWaitingSoC.SlottedAloha_preWaitingSoC(node_id, id=i + start_idx,
+                                                                                     seed=seed)
+
+        if self.method == 'SlottedAloha_disconnect5050':
+            self.models[eid] = SlottedAloha_disconnect5050.SlottedAloha_disconnect5050(node_id, id=i + start_idx,
+                                                                                       seed=seed)
+        if self.method == 'SlottedAloha_disconnectSoC':
+            self.models[eid] = SlottedAloha_disconnectSoC.SlottedAloha_disconnectSoC(node_id, id=i + start_idx,
+                                                                                     seed=seed)
+
+        if self.method == 'SlottedAloha_waitingTime':
+            self.models[eid] = SlottedAloha_waitingTime.SlottedAloha_waitingTime(node_id, id=i + start_idx, seed=seed)
+        if self.method == 'SlottedAloha_waitingTime_VDE':
+            self.models[eid] = SlottedAloha_waitingTime_VDE.SlottedAloha_waitingTime_VDE(node_id, id=i + start_idx,
+                                                                                         seed=seed)
+
+        if self.method == 'SlottedAloha_waitingTime_tau':
+            self.models[eid] = SlottedAloha_waitingTime_tau.SlottedAloha_waitingTime_tau(node_id, id=i + start_idx,
+                                                                                         seed=seed)
+        if self.method == 'SlottedAloha_waitingTime_VDE_tau':
+            self.models[eid] = SlottedAloha_waitingTime_VDE_tau.SlottedAloha_waitingTime_VDE_tau(node_id,
+                                                                                                 id=i + start_idx,
+                                                                                                 seed=seed)
+        if self.method == 'TrafoLoad':
+            self.models[eid] = TrafoLoad.TrafoLoad(node_id, id=i + start_idx, seed=seed)
+
         if self.method == 'voltageController_VDE':
             self.models[eid] = voltageController_VDE.AdjustedVoltageController(node_id, id=i + start_idx, seed=seed)
         if self.method == 'voltageController_OWN':
@@ -55,25 +97,25 @@ class AlohaSim(mosaik_api.Simulator):
             self.models[eid] = tau_vde.TauVde(node_id, id=i + start_idx, seed=seed)
         if self.method == 'tau_OWN':
             self.models[eid] = versions.tau_own.TauOwn(node_id, id=i + start_idx, seed=seed)
-        if self.method == 'lowestVoltage_Base':
-            self.models[eid] = versions.SA_preWaitingArrivers.BaseLine(node_id, id=i + start_idx, seed=seed)
-
-        # "tau_VDE", "tau_own"
 
         return [{'eid': eid, 'type': model}]
 
     def step(self, time, inputs):
-
         participants = self.getParticipants(inputs)
         arrivers = self.getArrivers(inputs, time)
         for model in self.models:
             input = inputs.get(model)
             instance = self.models.get(model)
-            if self.method == 'pure':
+            if self.method == 'SlottedAloha' or self.method == 'SlottedAloha_disconnect5050' \
+                    or self.method == 'SlottedAloha_disconnectSoC' or self.method == 'SlottedAloha_waitingTime' \
+                    or self.method == 'SlottedAloha_waitingTime_VDE' or self.method == 'SlottedAloha_waitingTime_tau' \
+                    or self.method == 'SlottedAloha_waitingTime_VDE_tau':
                 instance.step(time, input, participants)
-            elif self.method == 'lowestVoltage_Base':
+            elif self.method == 'SlottedAloha_lowestGlobalVoltage':
                 inputs = self.getMinimalVoltage(inputs)
                 instance.step(time, input, arrivers, participants)
+            elif self.method == 'TrafoLoad':
+                instance.step(input)
             else:
                 instance.step(time, input, arrivers, participants)
 
@@ -105,7 +147,7 @@ class AlohaSim(mosaik_api.Simulator):
     def getParticipants(self, inputs):
         counterPar = 0
         for item in inputs.values():
-            if list(item.get('available').values())[0] & (list(item.get('current_soc').values())[0] < 100.0):
+            if list(item.get('available').values())[0] and list(item.get('current_soc').values())[0] < 100.0:
                 counterPar += 1
         return counterPar
 
