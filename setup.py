@@ -13,7 +13,7 @@ sim_config = {
         'python': 'database.influx:Simulator'
     },
     'FlexEVSim': {
-        'cmd': 'java -ea -jar ..\AlohaSim\FlexEV\mosaik-flexev-1.1.2.jar %(addr)s'
+        'cmd': 'java -ea -jar ..\AlohaSim\FlexEV\mosaik-flexev-1.1.4.jar %(addr)s'
     },
     'AlohaSim': {
         'python': 'controller.simulator:AlohaSim'
@@ -32,11 +32,12 @@ BATTERY_CAPACITY = 36253.11
 seeds = [41]  # 41, 53, 67, 79
 speeds = [96]
 limits = [250]
-methods = ["onlyVDE"]
+methods = ['SlottedAloha_waitingTime']
 
 
-# "onlyVDE", "pure", "baseLine", "voltageController_VDE", "voltageController_OWN", "tau_VDE", "tau_OWN",
-# "lowestVoltage_Base"
+# 'onlyVDE', 'SlottedAloha', 'SlottedAloha_lowestGlobalVoltage', 'SlottedAloha_preWaitingArrivers',
+# 'SlottedAloha_preWaitingSoC', 'SlottedAloha_disconnect5050', 'SlottedAloha_disconnectSoC','SlottedAloha_waitingTime','SlottedAloha_waitingTime_VDE' , 'voltageController_VDE',
+# 'voltageController_OWN', 'tau_VDE', 'tau_OWN'
 
 def get_free_tcp_port():
     tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -54,41 +55,50 @@ def main():
             create_scenario(world, GRID_NAME, charge_speed=speeds[0], method=methods[j], limit=limits[0],
                             seed=seeds[i],
                             influxdb=True)
+            print("starting method ", methods[j], " with seed ", seeds[i])
             world.run(until=DURATION)  # As fast as possilbe
             world.shutdown()  # delete world again
             print("finished method ", methods[j], " with seed ", seeds[i])
+
+
+def getTrafo(grid_file, grid):
+    print('Hallo')
+
 
 
 def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxdb=True):
     grid_file = 'data/%s.json' % grid_name
 
     # Start simulators
-    flexev = world.start("FlexEVSim", sim_start=START)
+    flexev = world.start("FlexEVSim")
     aloha = world.start("AlohaSim", step_size=60, method=method)
 
-    grid, houses = ieee906.connect_ieee906(world, start_time=START)
+    grid, houses, trafo = ieee906.connect_ieee906(world, start_time=START)
     evs = ieee906.get_load_busses()
 
-    evs2 = evs.copy() + evs.copy()
+    # evs2 = evs.copy() + evs.copy()
 
-    evs = evs2.copy()
+    # evs = evs2.copy()
 
     random.seed(42)
     random.shuffle(evs)
-
+    evs = evs + evs[0:28]
     # controllers = []
     # for node_id in evs:
     #    controllers.append(aloha.AlohaOben(node_id=node_id))
     controllers = [aloha.AlohaOben(node_id=node_id, seed=seed) for node_id in evs]
 
-    evflexs = [flexev.FlexEV(node_id=node_id, max_charge_rate=charge_speed, battery_capacity=BATTERY_CAPACITY).children[0] for node_id in evs]
+    evflexs = [
+        flexev.FlexEV(node_id=node_id, max_charge_rate=charge_speed, battery_capacity=BATTERY_CAPACITY).children[0] for
+        node_id in evs]
 
-    connect_cs_to_grid(world, controllers, evflexs, grid)
+    # trafo = getTrafo(grid_file, grid)
+    connect_cs_to_grid(world, controllers, evflexs, grid, trafo)
 
     if influxdb:
         influxdb_collector_sim = world.start('InfluxDB', step_size=60)
         influxdb_collector = influxdb_collector_sim.Database(
-            db_name='aloha_test_9',
+            db_name='aloha_test_8',
             run_id=str(uuid.uuid4()),
             start_timestamp=START.replace(' ', 'T'),
             time_unit='s',
@@ -122,10 +132,10 @@ def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxd
         influxdb_collector_sim.add_component_tag(all_ids, 'speed', str(charge_speed))
         influxdb_collector_sim.add_component_tag(all_ids, 'limit', str(limit))
         influxdb_collector_sim.add_component_tag(all_ids, 'method', method)
-        influxdb_collector_sim.add_component_tag(all_ids, 'run_nr', 4)
+        influxdb_collector_sim.add_component_tag(all_ids, 'run_nr', 11)
 
 
-def connect_cs_to_grid(world, controllers, evs, grid):
+def connect_cs_to_grid(world, controllers, evs, grid, trafo):
     # Connect bus to controller
     buses = filter(lambda e: e.type == 'PQBus', grid)
     buses = {b.eid.split('-')[1]: b for b in buses}
@@ -133,6 +143,18 @@ def connect_cs_to_grid(world, controllers, evs, grid):
     for c in controllers:
         node_id = c_data[c]['node_id']
         world.connect(buses[node_id], c, 'Vm', 'Va')
+
+    # Connect trafo
+    # trafos = filter(lambda e: e.type == 'Transformer', grid)
+    # trafos = {b.eid.split('-')[1]: b for b in trafos}
+    # trafo_data = world.get_data(trafo, 'node_id')
+    # for t in trafo:
+    #     node_id = trafo_data[t]['node_id']
+    #     world.connect(trafos[node_id], t, 'P_from', 'Q_from', 'U_s')
+    for c in controllers:
+        world.connect(trafo['transformer'], c, 'P_from', 'Q_from')
+
+
 
     # connect controller to evs
     ev_data = world.get_data(evs, 'node_id')
@@ -155,6 +177,5 @@ def connect_cs_to_grid(world, controllers, evs, grid):
         node_id = ev_data[ev]['node_id']
         world.connect(ev, buses[node_id], 'P', 'Q', time_shifted=True, initial_data={'P': 0.0, 'Q': 0.0})
     print("")
-
 
 main()
