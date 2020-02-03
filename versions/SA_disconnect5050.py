@@ -1,4 +1,4 @@
-import versions.SlottedAloha as SlottedAloha
+import versions.SA_preWaitingArrivers as SlottedAloha_preWaitingArrivers
 import random
 
 NORM_VOLTAGE = 230
@@ -16,21 +16,28 @@ meta = {
 }
 
 
-class SlottedAloha_disconnect5050(SlottedAloha):
+class SlottedAloha_disconnect5050(SlottedAloha_preWaitingArrivers.SlottedAloha_preWaitingArrivers):
 
     def __init__(self, node_id, id, seed):
+        self.data = node_id
         self.step_size = 60
+        self.counter = 0
         self.node_id = node_id
-        self.id = id
-        self.seed = seed
-        self.participants = 0
-        self.chargingFLAG = False
-        self.waitingTime = 0
+        self.voltage = 230.0
         self.P_out = 0.0
+        self.Q_out = 0.0
+        self.Vm = 230.0
+        self.id = id
+        self.chargingFLAG = False
+        self.arriverFlag = False
+        self.waitingTime = 0
         self.P_old = 0.0
+        self.arrivers = 0
+        self.participants = 0
+        self.seed = seed
         self.disconnectFLAG = False
 
-    def step(self, simTime, inputs, participants):
+    def step(self, simTime, inputs, participants, ):
         self.participants = participants
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
             if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
@@ -51,6 +58,7 @@ class SlottedAloha_disconnect5050(SlottedAloha):
             self.P_old = P
             self.chargingFLAG = True
         else:
+            print('SlottedAloha: COLLISION')
             self.determineDisconnect()
             if self.disconnectFLAG:
                 self.P_out = 0.0
@@ -61,6 +69,7 @@ class SlottedAloha_disconnect5050(SlottedAloha):
                 self.chargingFLAG = False
 
     def determineDisconnect(self):
+        print('SlottedAloha_disconnect5050: determineDisconnect()')
         random.seed(self.seed)
         result = random.randrange(0, 2, 1)
         if result == 1:

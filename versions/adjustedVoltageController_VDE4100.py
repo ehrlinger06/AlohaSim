@@ -1,9 +1,9 @@
-from versions.SA_preWaitingArrivers import BaseLine
+from versions.SA_preWaitingArrivers import SlottedAloha_preWaitingArrivers
 
 NORM_VOLTAGE = 230
 
 
-class AdjustedVoltageController(BaseLine):
+class AdjustedVoltageController(SlottedAloha_preWaitingArrivers):
 
     def calcPower(self, inputs):
         available = self.getAtt('available', inputs)

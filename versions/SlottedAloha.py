@@ -1,8 +1,11 @@
+import math
+
 import mosaik_api
 import random
 
 NORM_VOLTAGE = 230
-BATTERY_CAPACITY = 40000
+BATTERY_CAPACITY = 36253.11
+CHARGE_SPEED = 96
 
 meta = {
     'versions': {
@@ -11,17 +14,17 @@ meta = {
             'any_inputs': True,
             'params': ['node_id', 'id', 'seed'],
             'attrs': ['node_id', 'voltage', 'Vm', 'Va', 'P_out', 'Q_out', 'arrival_time', 'departure_time',
-                      'available', 'current_soc', 'possible_charge_rate', 'Q', 'P'],
+                      'available', 'current_soc', 'possible_charge_rate', 'Q', 'P', 'P_from', 'Q_from', 'U_s'],
         },
     }
 }
 
 
-class PureAloha_Class:
+class SlottedAloha_Class:
     def __init__(self, node_id, id, seed):
         self.data = node_id
         self.step_size = 60
-        self.counter = 0
+        self.counter = 1
         self.node_id = node_id
         self.voltage = 230.0
         self.P_out = 0.0
@@ -39,6 +42,7 @@ class PureAloha_Class:
         self.participants = 0
         self.seed = seed
         self.time = 0
+        self.availableOld = False
 
     def getAtt(self, attr, inputDict):
         attrDict = inputDict.get(attr)
@@ -84,7 +88,8 @@ class PureAloha_Class:
 
     def step(self, simTime, inputs, participants):
         self.participants = participants
-        self.time = (simTime - self.step_size) / self.step_size
+        self.time = ((simTime - self.step_size) / self.step_size)
+
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
             if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
                 self.charging(inputs)
@@ -98,17 +103,60 @@ class PureAloha_Class:
 
     def charging(self, inputs):
         P = self.calcPower(inputs)
+        # self.printing(inputs)
 
         if P > 0:
+            print('   P:', P, 'in step:', self.time, 'in controller Aloha_', self.id)
             self.P_out = P
             self.chargingFLAG = True
             self.arriverFlag = False
         else:
+            print('SlottedAloha: COLLISION')
             self.P_out = 0.0
             self.chargingFLAG = False
             self.arriverFlag = False
-            self.waitingTime = self.calculateWaitingTime()
+            self.waitingTime = self.calculateWaitingTime(inputs)
 
-    def calculateWaitingTime(self):
+    def calculateWaitingTime(self, inputs):
         random.seed(self.seed)
         return random.randrange(0, max(self.participants, 2), 1)
+
+
+    def calculateLoadingTime(self, inputs):
+        neededCharge = BATTERY_CAPACITY * (1 - (self.getAtt('current_soc', inputs) / 100))
+        return int((neededCharge / (NORM_VOLTAGE * CHARGE_SPEED)) * 60)
+
+    def printing(self, inputs):
+        remainingLoadingTime = self.calculateLoadingTime(inputs)
+        timeUntilDeparture = self.getAtt('departure_time', inputs) - self.time
+        timeSinceArrival = self.time - self.getAtt('arrival_time', inputs)
+        availableTime = self.getAtt('departure_time', inputs) - self.getAtt('arrival_time', inputs)
+        id = 'Aloha_%s' % (self.id)
+        timeUsed = max(timeSinceArrival, 1) / availableTime
+        timeUseable = timeUntilDeparture / availableTime
+        amountOfCharges = timeUntilDeparture / max(remainingLoadingTime, 1)
+        formula = (amountOfCharges / math.pow(max(timeSinceArrival, 1), 2)) * (self.getAtt('current_soc', inputs) / 100)
+        formula2 = amountOfCharges * (1 - (self.getAtt('current_soc', inputs) / 100))
+        formula3 = (amountOfCharges / max(timeSinceArrival, 1)) / self.participants
+
+        print('model: ', id, ', time: ', self.time)
+        print('RESULTSTEP1: amountOfCharges: ', amountOfCharges)
+        print('--timeUntilDeparture: ', timeUntilDeparture)
+        print('--remainingLoadingTime: ', remainingLoadingTime)  # goes down, to 0, lower is better, max. 9 8,5
+        print('current_soc: ', self.getAtt('current_soc', inputs))
+        print('timeUsed: ', timeSinceArrival)  # goes up, from 0 to 1, lower is better
+        print('RESULTSTEP2: amountOfCharges * timeSinceArrival:', amountOfCharges / max(timeSinceArrival, 1))
+        print('participants: ', self.participants)  # not constant, goes up and down, lower is better
+        print('RESULT: (amountOfCharges * timeUsed) / participants: ', formula3)
+        # print('timeUntilDeparture: ', timeUntilDeparture)  # goes down, to 0, higher is better
+        # print('timeSinceArrival: ', timeSinceArrival)  # goes up, from 0, lower is better
+        # print('availableTime: ', availableTime)  # constant, higher is better
+        # print('participants: ', self.participants)  # not constant, goes up and down, lower is better
+        print('current_soc: ', self.getAtt('current_soc', inputs))  # goes up, to 100, higher is better
+        # print('timeUsed: ', timeUsed)  # goes up, from 0 to 1, lower is better
+        # print('timeUseable: ', timeUseable)  # goes down, from 1 to 0, higher is better
+
+        # print('amountOfCharges: ', amountOfCharges)
+        # print('formula: ', formula)
+        # print('formula2: ', formula2)
+        print("  ")

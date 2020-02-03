@@ -17,7 +17,7 @@ meta = {
 }
 
 
-class BaseLine:
+class SlottedAloha_preWaitingArrivers:
     def __init__(self, node_id, id, seed):
         self.data = node_id
         self.step_size = 60
@@ -31,10 +31,7 @@ class BaseLine:
         self.chargingFLAG = False
         self.arriverFlag = False
         self.waitingTime = 0
-        self.chargingTime = 0
-        self.VmOLD = 0
         self.P_old = 0.0
-        self.P_new = 0.0
         self.arrivers = 0
         self.participants = 0
         self.seed = seed
@@ -110,6 +107,8 @@ class BaseLine:
             self.chargingFLAG = True
             self.arriverFlag = False
         else:
+            print('SlottedAloha: COLLISION')
+            self.P_out = 0.0
             self.chargingFLAG = False
             self.arriverFlag = False
             self.waitingTime = self.calculateWaitingTime()
@@ -119,6 +118,7 @@ class BaseLine:
         return random.randrange(0, max(self.participants, 2), 1)
 
     def calculatePreWaitingTime(self, inputs):
+        print('SlottedAloha_preWaitingArrivers: calculatePreWaitingTime()')
         random.seed(self.seed)
         return random.randrange(0, self.arrivers, 1)
 

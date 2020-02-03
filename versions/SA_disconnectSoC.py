@@ -1,4 +1,4 @@
-import versions.SlottedAloha as SlottedAloha
+import versions.SA_preWaitingArrivers as SlottedAloha_preWaitingArrivers
 import random
 
 NORM_VOLTAGE = 230
@@ -20,18 +20,25 @@ meta = {
 }
 
 
-class SlottedAloha_disconnectSoC(SlottedAloha):
+class SlottedAloha_disconnectSoC(SlottedAloha_preWaitingArrivers.SlottedAloha_preWaitingArrivers):
 
     def __init__(self, node_id, id, seed):
+        self.data = node_id
         self.step_size = 60
+        self.counter = 0
         self.node_id = node_id
-        self.id = id
-        self.seed = seed
-        self.participants = 0
-        self.chargingFLAG = False
-        self.waitingTime = 0
+        self.voltage = 230.0
         self.P_out = 0.0
+        self.Q_out = 0.0
+        self.Vm = 230.0
+        self.id = id
+        self.chargingFLAG = False
+        self.arriverFlag = False
+        self.waitingTime = 0
         self.P_old = 0.0
+        self.arrivers = 0
+        self.participants = 0
+        self.seed = seed
         self.disconnectFLAG = False
 
     def step(self, simTime, inputs, participants):
@@ -55,6 +62,7 @@ class SlottedAloha_disconnectSoC(SlottedAloha):
             self.P_old = P
             self.chargingFLAG = True
         else:
+            print('SlottedAloha: COLLISION')
             self.determineDisconnect(inputs)
             if self.disconnectFLAG:
                 self.P_out = 0.0
@@ -65,6 +73,7 @@ class SlottedAloha_disconnectSoC(SlottedAloha):
                 self.chargingFLAG = False
 
     def determineDisconnect(self, inputs):
+        print('SlottedAloha_disconnectSoC: determineDisconnect()')
         remainingLoadingTime = self.calculateLoadingTime(inputs)
         timeUntilDeparture = self.getAtt('departure_time', inputs) - self.time
 
@@ -93,3 +102,18 @@ class SlottedAloha_disconnectSoC(SlottedAloha):
     def calculateLoadingTime(self, inputs):
         neededCharge = BATTERY_CAPACITY * (1 - (self.getAtt('current_soc', inputs) / 100))
         return int((neededCharge / (NORM_VOLTAGE * CHARGE_SPEED)) * 60)
+
+    def determineDisconnect2(self, inputs):
+        # print('SlottedAloha_disconnectSoC: determineDisconnect()')
+        remainingLoadingTime = self.calculateLoadingTime(inputs)
+        timeUntilDeparture = self.getAtt('departure_time', inputs) - self.time
+        timeSinceArrival = self.time - self.getAtt('arrival_time', inputs)
+        availableTime = self.getAtt('departure_time', inputs) - self.time - self.getAtt('arrival_time', inputs)
+
+
+        if timeUntilDeparture < remainingLoadingTime:  # not enough time left too fully charge
+            print('Emergency Level 9999')
+            # Stay connected, using the last P_out value calculated, which was greater than 0.0
+            return False
+        else:  # enough time too fully charge
+            result = timeUntilDeparture / remainingLoadingTime
