@@ -30,6 +30,9 @@ def get_load_busses():
         busses = ['bus_' + row[2] for row in list(config_reader)[3:]]
     return busses
 
+def get_transformer():
+    print("hello")
+
 
 def connect_ieee906(world, start_time=START):
     """
@@ -59,6 +62,8 @@ def connect_ieee906(world, start_time=START):
     grid = pypower.Grid(gridfile=DATAFOLDER + 'ieee906.json').children
     buses = filter(lambda e: e.type == 'PQBus', grid)
     buses = {b.eid.split('-')[1]: b for b in buses}
+    trafo = filter(lambda e: e.type == 'Transformer', grid)
+    trafo = {t.eid.split('-')[1]: t for t in trafo}
 
     # start and connect household loads from profiles
     houses = []
@@ -75,4 +80,4 @@ def connect_ieee906(world, start_time=START):
             world.connect(loadEntity, buses[bus], 'P', 'Q')
             houses.append(loadEntity)
             i = i + 1
-    return grid, houses
+    return grid, houses, trafo
