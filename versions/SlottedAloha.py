@@ -6,6 +6,7 @@ import random
 NORM_VOLTAGE = 230
 BATTERY_CAPACITY = 36253.11
 CHARGE_SPEED = 96
+TRAFO_LIMIT = 121000
 
 meta = {
     'versions': {
@@ -90,6 +91,13 @@ class SlottedAloha_Class:
         self.participants = participants
         self.time = ((simTime - self.step_size) / self.step_size)
 
+        P_from = self.getAtt('P_from', inputs)
+        Q_from = self.getAtt('Q_from', inputs)
+
+        self.S = math.sqrt(math.pow(P_from, 2) + math.pow(Q_from, 2))
+        if self.id == 0:
+            print('S:', self.S, 'in step:', self.time, 'in controller Aloha_', self.id)
+
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
             if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
                 self.charging(inputs)
@@ -105,13 +113,21 @@ class SlottedAloha_Class:
         P = self.calcPower(inputs)
         # self.printing(inputs)
 
-        if P > 0:
+        if P > 0 and self.S <= TRAFO_LIMIT:
             print('   P:', P, 'in step:', self.time, 'in controller Aloha_', self.id)
             self.P_out = P
             self.chargingFLAG = True
             self.arriverFlag = False
         else:
-            print('SlottedAloha: COLLISION')
+            if P <= 0 and self.S <= TRAFO_LIMIT:
+                print('   SlottedAloha_waitingTime: Vm COLLISION, S ok, in step:', self.time, 'in controller Aloha_',
+                      self.id)
+            elif P <= 0 and self.S > TRAFO_LIMIT:
+                print('   SlottedAloha_waitingTime: Vm COLLISION, S COLLISION, in step:', self.time,
+                      'in controller Aloha_', self.id)
+            elif P > 0 and self.S > TRAFO_LIMIT:
+                print('   SlottedAloha_waitingTime: Vm ok, S COLLISION, in step:', self.time,
+                      'in controller Aloha_', self.id)
             self.P_out = 0.0
             self.chargingFLAG = False
             self.arriverFlag = False
@@ -120,7 +136,6 @@ class SlottedAloha_Class:
     def calculateWaitingTime(self, inputs):
         random.seed(self.seed)
         return random.randrange(0, max(self.participants, 2), 1)
-
 
     def calculateLoadingTime(self, inputs):
         neededCharge = BATTERY_CAPACITY * (1 - (self.getAtt('current_soc', inputs) / 100))

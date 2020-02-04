@@ -32,7 +32,7 @@ BATTERY_CAPACITY = 36253.11
 seeds = [41]  # 41, 53, 67, 79
 speeds = [96]
 limits = [250]
-methods = ['SlottedAloha_waitingTime']
+methods = ['SlottedAloha']
 
 
 # 'onlyVDE', 'SlottedAloha', 'SlottedAloha_lowestGlobalVoltage', 'SlottedAloha_preWaitingArrivers',
@@ -132,7 +132,7 @@ def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxd
         influxdb_collector_sim.add_component_tag(all_ids, 'speed', str(charge_speed))
         influxdb_collector_sim.add_component_tag(all_ids, 'limit', str(limit))
         influxdb_collector_sim.add_component_tag(all_ids, 'method', method)
-        influxdb_collector_sim.add_component_tag(all_ids, 'run_nr', 11)
+        influxdb_collector_sim.add_component_tag(all_ids, 'run_nr', 1)
 
 
 def connect_cs_to_grid(world, controllers, evs, grid, trafo):
