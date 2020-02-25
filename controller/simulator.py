@@ -11,6 +11,7 @@ import versions.SA_waitingTime as SlottedAloha_waitingTime
 import versions.SA_waitingTime_VDE as SlottedAloha_waitingTime_VDE
 import versions.SA_waitingTime_tau as SlottedAloha_waitingTime_tau
 import versions.SA_waitingTime_VDE_tau as SlottedAloha_waitingTime_VDE_tau
+import versions.SA_waitingTime_participants as SlottedAloha_waitingTime_participants
 import versions.TrafoLoad_noEVs as TrafoLoad
 
 import versions
@@ -25,7 +26,8 @@ meta = {
             'any_inputs': True,
             'params': ['node_id', 'id', 'seed'],
             'attrs': ['node_id', 'voltage', 'Vm', 'Va', 'P_out', 'Q_out', 'arrival_time', 'departure_time',
-                      'available', 'current_soc', 'possible_charge_rate', 'Q', 'P', 'P_from', 'Q_from', 'U_s'],
+                      'available', 'current_soc', 'possible_charge_rate', 'Q', 'P', 'P_from', 'Q_from', 'U_s',
+                      'Vm_10M_average'],
         },
     }
 }
@@ -39,6 +41,7 @@ class AlohaSim(mosaik_api.Simulator):
         self.step_size = 60
         self.models = {}
         self.method = 'baseLine'
+        self.collisionCounter = 0
 
     def init(self, sid, step_size, method):
         self.step_size = step_size
@@ -86,6 +89,10 @@ class AlohaSim(mosaik_api.Simulator):
             self.models[eid] = SlottedAloha_waitingTime_VDE_tau.SlottedAloha_waitingTime_VDE_tau(node_id,
                                                                                                  id=i + start_idx,
                                                                                                  seed=seed)
+        if self.method == 'SlottedAloha_waitingTime_participants':
+            self.models[eid] = SlottedAloha_waitingTime_participants.SlottedAloha_waitingTime_participants(node_id,
+                                                                                                           id=i + start_idx,
+                                                                                                           seed=seed)
         if self.method == 'TrafoLoad':
             self.models[eid] = TrafoLoad.TrafoLoad(node_id, id=i + start_idx, seed=seed)
 
@@ -109,7 +116,8 @@ class AlohaSim(mosaik_api.Simulator):
             if self.method == 'SlottedAloha' or self.method == 'SlottedAloha_disconnect5050' \
                     or self.method == 'SlottedAloha_disconnectSoC' or self.method == 'SlottedAloha_waitingTime' \
                     or self.method == 'SlottedAloha_waitingTime_VDE' or self.method == 'SlottedAloha_waitingTime_tau' \
-                    or self.method == 'SlottedAloha_waitingTime_VDE_tau':
+                    or self.method == 'SlottedAloha_waitingTime_VDE_tau' or self.method == 'tau_VDE' \
+                    or self.method == 'SlottedAloha_waitingTime_participants':
                 instance.step(time, input, participants)
             elif self.method == 'SlottedAloha_lowestGlobalVoltage':
                 inputs = self.getMinimalVoltage(inputs)
@@ -118,6 +126,8 @@ class AlohaSim(mosaik_api.Simulator):
                 instance.step(input)
             else:
                 instance.step(time, input, arrivers, participants)
+            # self.collisionCounter += instance.collisionCounter
+        # print("simulator.collisionCounter:", self.collisionCounter)
 
         return time + self.step_size
 

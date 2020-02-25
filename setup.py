@@ -2,6 +2,8 @@ import random
 import socket
 import uuid
 from datetime import datetime
+import CollisionCounter as CollisionCounter
+import LowVoltageCounter as LowVoltageCounter
 
 # from mosaik.util import connect_many_to_one
 import mosaik
@@ -32,7 +34,7 @@ BATTERY_CAPACITY = 36253.11
 seeds = [41]  # 41, 53, 67, 79
 speeds = [96]
 limits = [250]
-methods = ['SlottedAloha']
+methods = ['SlottedAloha_waitingTime_VDE_tau']
 
 
 # 'onlyVDE', 'SlottedAloha', 'SlottedAloha_lowestGlobalVoltage', 'SlottedAloha_preWaitingArrivers',
@@ -58,7 +60,10 @@ def main():
             print("starting method ", methods[j], " with seed ", seeds[i])
             world.run(until=DURATION)  # As fast as possilbe
             world.shutdown()  # delete world again
+            CollisionCounter.CollisionCounter.getInstance().printResults()
+            LowVoltageCounter.LowVoltageCounter.getInstance().print()
             print("finished method ", methods[j], " with seed ", seeds[i])
+
 
 
 def getTrafo(grid_file, grid):
@@ -82,7 +87,8 @@ def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxd
 
     random.seed(42)
     random.shuffle(evs)
-    evs = evs + evs[0:28]
+    # evs = evs + evs[0:7]
+    evs = evs + evs[0:27]
     # controllers = []
     # for node_id in evs:
     #    controllers.append(aloha.AlohaOben(node_id=node_id))
@@ -98,7 +104,7 @@ def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxd
     if influxdb:
         influxdb_collector_sim = world.start('InfluxDB', step_size=60)
         influxdb_collector = influxdb_collector_sim.Database(
-            db_name='aloha_test_8',
+            db_name='aloha_test_10',
             run_id=str(uuid.uuid4()),
             start_timestamp=START.replace(' ', 'T'),
             time_unit='s',
@@ -126,6 +132,13 @@ def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxd
         for bus in buses_e:
             node_id = bus.eid.split('-')[1]
             influxdb_collector_sim.add_component_tag(bus.full_id, 'node_id', node_id)
+
+        # store my own values
+        mosaik.util.connect_many_to_one(world, controllers, influxdb_collector, 'Vm_10M_average')
+        controller_data = world.get_data(controllers, 'node_id')
+        for controller in controllers:
+            node_id = controller_data[controller]['node_id']
+            influxdb_collector_sim.add_component_tag(controller.full_id, 'node_id', node_id)
 
         # Add General Tag to all entities
         influxdb_collector_sim.add_component_tag(all_ids, 'seed', str(seed))
@@ -176,6 +189,6 @@ def connect_cs_to_grid(world, controllers, evs, grid, trafo):
     for ev in evs:
         node_id = ev_data[ev]['node_id']
         world.connect(ev, buses[node_id], 'P', 'Q', time_shifted=True, initial_data={'P': 0.0, 'Q': 0.0})
-    print("")
+
 
 main()
