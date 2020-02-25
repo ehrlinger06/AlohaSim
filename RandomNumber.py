@@ -6,12 +6,12 @@ class RandomNumber():
 
     @staticmethod
     def getInstance():
-        if RandomNumber.__instance == None:
+        if RandomNumber.__instance is None:
             RandomNumber()
         return RandomNumber.__instance
 
     def __init__(self):
-        if RandomNumber.__instance != None:
+        if RandomNumber.__instance is not None:
             raise Exception("Singleton already present")
         else:
             RandomNumber.__instance = self
