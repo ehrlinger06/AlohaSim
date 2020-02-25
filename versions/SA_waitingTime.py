@@ -137,14 +137,15 @@ class SlottedAloha_waitingTime(SlottedAloha.SlottedAloha_Class):
             self.waitingTime = MyRandom.RandomNumber.getInstance().getRandomNumber(sampleTime)
         elif sampleTime < 1:
             upperLimit = (10 * (1 - (math.exp(sampleTime - 1)))) + 1
-            self.waitingTime = MyRandom.RandomNumber.getInstance().getRandomNumber(max(min(upperLimit,
-                                                                                           timeUntilDepature), 1))
             if not self.stayConnected:
                 self.stayConnected = True
                 self.stayedConnected = True
             else:
                 self.stayConnected = False
                 self.stayedConnected = False
+                upperLimit = 10 - upperLimit
+            self.waitingTime = MyRandom.RandomNumber.getInstance().getRandomNumber(max(min(upperLimit,
+                                                                                           timeUntilDepature), 1))
 
     def calcPower_VoltageNotHighEnough(self, inputs):
         available = self.getAtt('available', inputs)
