@@ -1,4 +1,5 @@
 import random
+#from termcolor import colored
 
 random.seed(41)
 one = 0
@@ -40,3 +41,5 @@ print('six:', six)
 print('seven:', seven)
 print('eight:', eight)
 print('nine:', nine)
+print()
+print('\033[31m' + 'Success!' + '\033[0m')
