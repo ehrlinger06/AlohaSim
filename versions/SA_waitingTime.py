@@ -61,16 +61,23 @@ class SlottedAloha_waitingTime(SlottedAloha.SlottedAloha_Class):
         self.S = math.sqrt(math.pow(P_from, 2) + math.pow(Q_from, 2))
         if self.id == 0:
             print('S:', self.S, 'in step:', self.time, 'in controller Aloha_', self.id)
-
+        self.keyToValue(inputs, 'Vm')
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
             if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
                 self.charging(inputs)
+                #print('   controller Aloha_', self.id, ' is charging at ', self.keyToValue(inputs, 'Vm'), 'V using ',
+                #      self.P_out, 'W of Power')
             elif (not self.chargingFLAG) & (self.waitingTime > 0):  # not charging right now, waiting time not yet over
                 self.waitingTime -= 1
+                #print('   controller Aloha_', self.id, ' is waiting, with ', self.waitingTime, ' min left(after)')
             elif self.chargingFLAG and not self.stayConnected:  # charging right now, time is not over
                 self.charging(inputs)
+                #print('   controller Aloha_', self.id, ' is charging at ', self.keyToValue(inputs, 'Vm'), 'V using ',
+                #      self.P_out, 'W of Power')
             elif self.chargingFLAG and self.stayConnected:
                 self.chargingWhileWaiting(inputs)
+                #print('   \033[31m' + 'controller Aloha_', self.id, ' is emergencycharging at ', self.keyToValue(inputs, 'Vm'),
+                #      'V using ', self.P_out, 'W of Power''\033[0m')
         else:
             self.chargingFLAG = False
             self.P_out = 0.0
@@ -123,8 +130,6 @@ class SlottedAloha_waitingTime(SlottedAloha.SlottedAloha_Class):
         return newWaitingTime
 
     def calculateWaitingTime(self, inputs):
-        if self.time >= 989:
-            print("Breaky")
         timeUntilDepature = self.getAtt('departure_time', inputs) - self.time
         remainingLoadingTime = self.calculateLoadingTime(inputs)
         sampleTime = int((timeUntilDepature - remainingLoadingTime) / self.participants)
@@ -150,3 +155,17 @@ class SlottedAloha_waitingTime(SlottedAloha.SlottedAloha_Class):
                 # return possible_charge_rate * Vm
                 return possible_charge_rate * Vm
         return 0.0
+
+    def keyToValue(self, inputs, attr):
+        result1 = inputs.get(attr)
+        vm = int(list(result1.values())[0])
+        bus = list(result1.keys())[0].replace("PyPower-0.0-", "")
+
+        marker = ""
+        if vm <= 207:
+            marker = " low"
+
+        finished = "{}:{}" + marker
+        return finished.format(bus, vm)
+
+

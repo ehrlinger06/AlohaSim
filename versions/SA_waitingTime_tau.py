@@ -59,6 +59,7 @@ class SlottedAloha_waitingTime_tau(SlottedAloha.SlottedAloha_Class):
                 if self.P_old > self.P_new:
                     difference = (self.P_old - self.P_new) * 0.632
                     self.P_out = self.P_old - difference
+                    self.P_old = self.P_out
                 else:
                     difference = (self.P_new - self.P_old) * 0.632
                     self.P_out = self.P_old + difference
@@ -74,18 +75,25 @@ class SlottedAloha_waitingTime_tau(SlottedAloha.SlottedAloha_Class):
         Q_from = self.getAtt('Q_from', inputs)
 
         self.S = math.sqrt(math.pow(P_from, 2) + math.pow(Q_from, 2))
-        if self.id == 0:
-            print('S:', self.S, 'in step:', self.time, 'in controller Aloha_', self.id)
+        # if self.id == 0:
+        #   print('S:', self.S, 'in step:', self.time, 'in controller Aloha_', self.id)
 
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
             if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
                 self.charging(inputs)
+                print('controller Aloha_', self.id, ' is charging at ', self.getAtt('Vm', inputs), 'V using ',
+                      self.getAtt('P_out', inputs), 'W of Power')
             elif (not self.chargingFLAG) & (self.waitingTime > 0):  # not charging right now, waiting time not yet over
                 self.waitingTime -= 1
             elif self.chargingFLAG and not self.stayConnected:  # charging right now, time is not over
                 self.charging(inputs)
+                print('controller Aloha_', self.id, ' is charging at ', self.getAtt('Vm', inputs), 'V using ',
+                      self.getAtt('P_out', inputs), 'W of Power')
             elif self.chargingFLAG and self.stayConnected:
                 self.chargingWhileWaiting(inputs)
+                print('\033[31m' + 'controller Aloha_', self.id, ' is charging at ', self.getAtt('Vm', inputs), 'V using ',
+                      self.getAtt('P_out', inputs), 'W of Power''\033[0m')
+
         else:
             self.chargingFLAG = False
             self.P_out = 0.0
@@ -95,19 +103,19 @@ class SlottedAloha_waitingTime_tau(SlottedAloha.SlottedAloha_Class):
         # self.printing(inputs)
 
         if P > 0 and self.S <= 110000:
-            print('   P:', P, 'in step:', self.time, 'in controller Aloha_', self.id)
+            # print('   P:', P, 'in step:', self.time, 'in controller Aloha_', self.id)
             self.P_out = P
             self.chargingFLAG = True
             self.arriverFlag = False
         else:
-            if P <= 0 and self.S <= 110000:
-                print('   SlottedAloha_waitingTime: Vm COLLISION, S ok, in step:', self.time, 'in controller Aloha_', self.id)
-            elif P <= 0 and self.S > 110000:
-                print('   SlottedAloha_waitingTime: Vm COLLISION, S COLLISION, in step:', self.time,
-                      'in controller Aloha_', self.id)
-            elif P > 0 and self.S > 110000:
-                print('   SlottedAloha_waitingTime: Vm ok, S COLLISION, in step:', self.time,
-                      'in controller Aloha_', self.id)
+            # if P <= 0 and self.S <= 110000:
+            # print('   SlottedAloha_waitingTime: Vm COLLISION, S ok, in step:', self.time, 'in controller Aloha_', self.id)
+            # elif P <= 0 and self.S > 110000:
+            # print('   SlottedAloha_waitingTime: Vm COLLISION, S COLLISION, in step:', self.time,
+            #      'in controller Aloha_', self.id)
+            # elif P > 0 and self.S > 110000:
+            # print('   SlottedAloha_waitingTime: Vm ok, S COLLISION, in step:', self.time,
+            #      'in controller Aloha_', self.id)
             self.P_out = 0.0
             self.chargingFLAG = False
             self.arriverFlag = False
