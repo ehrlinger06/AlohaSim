@@ -2,11 +2,11 @@ from influxdb import DataFrameClient
 
 import os
 from multiprocessing import Pool
-import pandas as pd
+import pandas as pd  # hier
 import numpy as np
 from datetime import timedelta
-import matplotlib.pyplot as plt
-import seaborn as sns
+import matplotlib.pyplot as plt  # hier
+import seaborn as sns  # hier
 
 # set seaborn style on matplotlib
 sns.set()
@@ -18,10 +18,11 @@ host = 'localhost'
 port = 8086
 user = 'root'
 password = 'root'
-dbname = 'aloha_test_8'
-run_id = '20a52617-253d-40b6-9c20-e36cd4c0f8d8'
+dbname = 'aloha_test_10'
+run_id = '5841dd8c-d19b-44be-be1c-eaf305c9760c'
 
-plot_folder = 'C:/Users/MJE17/OneDrive/Dokumente/plots/'
+plot_folder = 'C:/Users/Michael/Documents/plots/'
+
 
 
 def get_available(client, bind_params):
@@ -252,14 +253,14 @@ def main():
 
     flex_evs = [t for t in query_tag('component') if 'Flex' in t]
     methods = query_tag('method')
-    methods = ['SlottedAloha_waitingTime_VDE_tau']
+    methods = ['SlottedAloha_waitingTime_participants']
     # scenarios = query_tag('scenario')
     # speeds = query_tag('speed')
     # limits = query_tag('limit')
     seeds = query_tag('seed')
     seeds = ['41']
     run_nrs = query_tag('run_nr')
-    run_nrs = ['7']
+    run_nrs = ['1']
 
     #insts = [(scenario, speed, limit)
     #         for scenario in scenarios
@@ -286,6 +287,7 @@ def main():
 
         for value in par_insts:
             proc_list.append(queue_data_par(value[0], value[1], value[2], value[3]))
+            finish_list.append(queue_leaving_soc_par(value[0], value[1], value[2], value[3]))
 
         proc_list = [el for sublist in proc_list for el in sublist]
         if len(proc_list) != 0:
