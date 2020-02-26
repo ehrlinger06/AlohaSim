@@ -34,7 +34,7 @@ BATTERY_CAPACITY = 36253.11
 seeds = [41]  # 41, 53, 67, 79
 speeds = [96]
 limits = [250]
-methods = ['SlottedAloha_waitingTime_VDE_tau']
+methods = ['SlottedAloha_waitingTime_participants']
 
 
 # 'onlyVDE', 'SlottedAloha', 'SlottedAloha_lowestGlobalVoltage', 'SlottedAloha_preWaitingArrivers',
