@@ -1,9 +1,9 @@
-from versions.SA_preWaitingArrivers import SlottedAloha_preWaitingArrivers
+from versions_unused.SA_preWaitingArrivers import SlottedAloha_preWaitingArrivers
 
 NORM_VOLTAGE = 230
 
 
-class AdjustedVoltageController(SlottedAloha_preWaitingArrivers):
+class TauOwn(SlottedAloha_preWaitingArrivers):
 
     def calcPower(self, inputs):
         available = self.getAtt('available', inputs)
@@ -11,7 +11,15 @@ class AdjustedVoltageController(SlottedAloha_preWaitingArrivers):
             possible_charge_rate = self.getAtt('possible_charge_rate', inputs)
             Vm = self.getAtt('Vm', inputs)
             if self.checkAtt(possible_charge_rate) & self.checkAtt(Vm):
-                return possible_charge_rate * Vm * self.calculatePowerIndex(Vm)
+                self.P_new = possible_charge_rate * Vm * self.calculatePowerIndex(Vm)
+                if self.P_old > self.P_new:
+                    difference = (self.P_old - self.P_new) * 0.632
+                    self.P_out = self.P_old - difference
+                else:
+                    difference = (self.P_new - self.P_old) * 0.632
+                    self.P_out = self.P_old + difference
+                    self.P_old = self.P_out
+                return self.P_out
         return 0.0
 
     def calculatePowerIndex(self, Vm):

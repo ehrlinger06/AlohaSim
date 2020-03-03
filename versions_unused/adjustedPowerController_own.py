@@ -1,4 +1,4 @@
-from versions.SA_preWaitingArrivers import SlottedAloha_preWaitingArrivers
+from versions_unused.SA_preWaitingArrivers import SlottedAloha_preWaitingArrivers
 
 NORM_VOLTAGE = 230
 
@@ -16,7 +16,7 @@ class AdjustedVoltageController(SlottedAloha_preWaitingArrivers):
 
     def calculatePowerIndex(self, Vm):
         if self.voltageHighEnough(Vm):
-            powerIndex = 20 * Vm / NORM_VOLTAGE - 17.6
+            powerIndex = 15.38 * Vm / NORM_VOLTAGE - 14.38
             if (powerIndex >= 0.0) & (powerIndex <= 1.0):
                 return powerIndex
             elif powerIndex > 1:
@@ -24,7 +24,7 @@ class AdjustedVoltageController(SlottedAloha_preWaitingArrivers):
         return 0
 
     def voltageHighEnough(self, Vm):
-        if Vm > 230 * 0.88:
+        if Vm > 230 * 0.935:
             return True
         else:
             return False

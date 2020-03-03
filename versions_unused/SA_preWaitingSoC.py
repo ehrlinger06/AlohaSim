@@ -1,7 +1,6 @@
-import mosaik_api
 import random
 
-import versions.SA_preWaitingArrivers as SlottedAloha_preWaitingArrivers
+import versions_unused.SA_preWaitingArrivers as SlottedAloha_preWaitingArrivers
 
 NORM_VOLTAGE = 230
 BATTERY_CAPACITY = 40000

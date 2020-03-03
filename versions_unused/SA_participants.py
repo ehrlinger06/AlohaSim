@@ -87,8 +87,6 @@ class SlottedAloha_waitingTime_participants(SlottedAloha.SlottedAloha_Class):
         Q_from = self.getAtt('Q_from', inputs)
 
         self.S = math.sqrt(math.pow(P_from, 2) + math.pow(Q_from, 2))
-        #if self.id == 0:
-        #    print('S:', self.S, 'in step:', self.time, 'in controller Aloha_', self.id)
 
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
             if (not self.chargingFLAG) & (self.waitingTime == 0):  # not charging right now, but waiting time is over
@@ -101,10 +99,8 @@ class SlottedAloha_waitingTime_participants(SlottedAloha.SlottedAloha_Class):
             self.P_old = 0.0
             self.waitingTime = 0
 
-        if self.getAtt('Vm', inputs) <= 207:
-            LowVoltageCounter.LowVoltageCounter.getInstance().addEntry(self.node_id, self.time,
-                                                                       self.getAtt('Vm', inputs), self.chargingFLAG,
-                                                                       self.stayConnected, self.P_out)
+        if self.S >= TRAFO_LIMIT or self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE):
+            CollisionCounter.CollisionCounter.getInstance().addCollision(self.time)
 
         self.calc_10M_average(inputs)
 
@@ -113,25 +109,15 @@ class SlottedAloha_waitingTime_participants(SlottedAloha.SlottedAloha_Class):
         # self.printing(inputs)
 
         if P > 0 and self.S <= TRAFO_LIMIT:
-            #print('   P:', P, 'in step:', self.time, 'in controller Aloha_', self.id)
             self.P_out = P
             self.chargingFLAG = True
         else:
-            #if P <= 0 and self.S <= 110000:
-            #    print('   SlottedAloha_waitingTime: Vm COLLISION, S ok, in step:', self.time, 'in controller Aloha_', self.id)
-            #elif P <= 0 and self.S > 110000:
-            #    print('   SlottedAloha_waitingTime: Vm COLLISION, S COLLISION, in step:', self.time,
-            #          'in controller Aloha_', self.id)
-            #elif P > 0 and self.S > 110000:
-            #    print('   SlottedAloha_waitingTime: Vm ok, S COLLISION, in step:', self.time,
-            #          'in controller Aloha_', self.id)
             self.P_out = 0.0
             self.P_old = 0.0
             self.chargingFLAG = False
             self.calculateWaitingTime(inputs)
 
     def calculateWaitingTime(self, inputs):
-        CollisionCounter.CollisionCounter.getInstance().addCollision(self.time)
         self.waitingTime = MyRandom.RandomNumber.getInstance().getRandomNumber(self.participants)
 
     def calc_10M_average(self, inputs):
