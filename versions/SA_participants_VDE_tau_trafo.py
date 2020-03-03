@@ -1,41 +1,48 @@
-from versions_unused.SA_preWaitingArrivers import SlottedAloha_preWaitingArrivers
+import versions.SlottedAloha as SlottedAloha
+import RandomNumber as MyRandom
 import CollisionCounter as CollisionCounter
 import LowVoltageCounter as LowVoltageCounter
 
 import math
 
 NORM_VOLTAGE = 230
+BATTERY_CAPACITY = 36253.11
+CHARGE_SPEED = 96
 TRAFO_LIMIT = 121000
 
+meta = {
+    'versions': {
+        'AlohaOben': {
+            'public': True,
+            'any_inputs': True,
+            'params': ['node_id', 'id', 'seed'],
+            'attrs': ['node_id', 'voltage', 'Vm', 'Va', 'P_out', 'Q_out', 'arrival_time', 'departure_time',
+                      'available', 'current_soc', 'possible_charge_rate', 'Q', 'P', 'P_from', 'Q_from', 'U_s'],
+        },
+    }
+}
 
-class TauVde(SlottedAloha_preWaitingArrivers):
 
+class SlottedAloha__participants_VDE_tau_trafo(SlottedAloha.SlottedAloha_Class):
     def __init__(self, node_id, id, seed):
         self.data = node_id
         self.step_size = 60
         self.counter = 1
         self.node_id = node_id
         self.voltage = 230.0
+        self.Vm = 230.0
         self.P_out = 0.0
         self.Q_out = 0.0
-        self.Vm = 230.0
         self.id = id
         self.chargingFLAG = False
-        self.arriverFlag = False
         self.waitingTime = 0
-        self.chargingTime = 0
-        self.VmOLD = 0
         self.P_old = 0.0
         self.P_new = 0.0
-        self.arrivers = 0
         self.participants = 0
         self.seed = seed
         self.time = 0
-        self.availableOld = False
         self.S = 0
-        self.waitedTime = 0
         self.stayConnected = False
-        self.collisionCounter = 0
         self.Vm_10M_average = 230.0
         self.Vm_sum = 0
 
@@ -45,7 +52,7 @@ class TauVde(SlottedAloha_preWaitingArrivers):
             possible_charge_rate = self.getAtt('possible_charge_rate', inputs)
             Vm = self.getAtt('Vm', inputs)
             if self.checkAtt(possible_charge_rate) & self.checkAtt(Vm):
-                self.P_new = possible_charge_rate * Vm * self.calculatePowerIndex(Vm)
+                self.P_new = possible_charge_rate * Vm * self.calculatePowerIndex(Vm) * self.calculateTrafoIndex()
                 if self.P_old > self.P_new:
                     difference = (self.P_old - self.P_new) * 0.632
                     self.P_out = self.P_old - difference
@@ -66,6 +73,15 @@ class TauVde(SlottedAloha_preWaitingArrivers):
                 return 1.0
         return 0
 
+    def calculateTrafoIndex(self):
+        if self.S <= (TRAFO_LIMIT * 1.1):
+            trafoIndex = (-1/24200) * self.S + 5.25
+            if (trafoIndex >= 0.0) & (trafoIndex <= 1.0):
+                return trafoIndex
+            elif trafoIndex > 1:
+                return 1.0
+        return 0.0
+
     def voltageHighEnough(self, Vm):
         if Vm > 230 * 0.88:
             return True
@@ -82,26 +98,35 @@ class TauVde(SlottedAloha_preWaitingArrivers):
         self.S = math.sqrt(math.pow(P_from, 2) + math.pow(Q_from, 2))
 
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
-            self.charging(inputs)
+            if self.waitingTime == 0:  # not charging right now, but waiting time is over
+                self.charging(inputs)
+            elif (not self.chargingFLAG) & (self.waitingTime > 0):  # not charging right now, waiting time not yet over
+                self.waitingTime -= 1
 
-            if self.S >= TRAFO_LIMIT or self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE):
+            if self.S > TRAFO_LIMIT or self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE):
                 CollisionCounter.CollisionCounter.getInstance().addCollision(self.time)
         else:
+            self.chargingFLAG = False
             self.P_out = 0.0
             self.P_old = 0.0
+            self.waitingTime = 0
 
         self.calc_10M_average(inputs)
 
     def charging(self, inputs):
         P = self.calcPower(inputs)
 
-        if P > 0:
+        if P > 0 and self.S <= TRAFO_LIMIT:
             self.P_out = P
             self.chargingFLAG = True
         else:
             self.P_out = 0.0
             self.P_old = 0.0
             self.chargingFLAG = False
+            self.calculateWaitingTime(inputs)
+
+    def calculateWaitingTime(self, inputs):
+        self.waitingTime = MyRandom.RandomNumber.getInstance().getRandomNumber(self.participants)
 
     def calc_10M_average(self, inputs):
         self.Vm_sum += self.getAtt('Vm', inputs)

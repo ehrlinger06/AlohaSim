@@ -25,7 +25,7 @@ meta = {
 }
 
 
-class SlottedAloha_waitingTime_VDE_tau(SlottedAloha.SlottedAloha_Class):
+class SlottedAloha_waitingTime_VDE_tau_trafo(SlottedAloha.SlottedAloha_Class):
     def __init__(self, node_id, id, seed):
         self.data = node_id
         self.step_size = 60
@@ -51,6 +51,7 @@ class SlottedAloha_waitingTime_VDE_tau(SlottedAloha.SlottedAloha_Class):
         self.S = 0
         self.waitedTime = 0
         self.stayConnected = False
+        self.stayedConnected = False
         self.collisionCounter = 0
         self.Vm_10M_average = 230.0
         self.Vm_sum = 0
@@ -62,7 +63,7 @@ class SlottedAloha_waitingTime_VDE_tau(SlottedAloha.SlottedAloha_Class):
             possible_charge_rate = self.getAtt('possible_charge_rate', inputs)
             Vm = self.getAtt('Vm', inputs)
             if self.checkAtt(possible_charge_rate) & self.checkAtt(Vm):
-                self.P_new = possible_charge_rate * Vm * self.calculatePowerIndex(Vm)
+                self.P_new = possible_charge_rate * Vm * self.calculatePowerIndex(Vm) * self.calculateTrafoIndex()
                 if self.P_old > self.P_new:
                     difference = (self.P_old - self.P_new) * 0.632
                     self.P_out = self.P_old - difference
@@ -82,6 +83,15 @@ class SlottedAloha_waitingTime_VDE_tau(SlottedAloha.SlottedAloha_Class):
             elif powerIndex > 1:
                 return 1.0
         return 0
+
+    def calculateTrafoIndex(self):
+        if self.S <= (TRAFO_LIMIT * 1.1):
+            trafoIndex = (-1/24200) * self.S + 5.25
+            if (trafoIndex >= 0.0) & (trafoIndex <= 1.0):
+                return trafoIndex
+            elif trafoIndex > 1:
+                return 1.0
+        return 0.0
 
     def voltageHighEnough(self, Vm):
         if Vm > 230 * 0.88:
@@ -108,11 +118,10 @@ class SlottedAloha_waitingTime_VDE_tau(SlottedAloha.SlottedAloha_Class):
             elif self.chargingFLAG and self.stayConnected:
                 self.chargingWhileWaiting(inputs)
 
-            if self.S >= TRAFO_LIMIT or self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE):
+            if self.S > TRAFO_LIMIT or self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE):
                 CollisionCounter.CollisionCounter.getInstance().addCollision(self.time)
         else:
             self.chargingFLAG = False
-            self.stayConnected = False
             self.P_out = 0.0
             self.P_old = 0.0
 
@@ -121,7 +130,7 @@ class SlottedAloha_waitingTime_VDE_tau(SlottedAloha.SlottedAloha_Class):
     def charging(self, inputs):
         P = self.calcPower(inputs)
 
-        if P > 0:
+        if P > 0 and self.S <= TRAFO_LIMIT:
             self.P_out = P
             self.chargingFLAG = True
             self.arriverFlag = False
@@ -148,11 +157,11 @@ class SlottedAloha_waitingTime_VDE_tau(SlottedAloha.SlottedAloha_Class):
         remainingLoadingTime = self.calculateLoadingTime(inputs)
         sampleTime = int((timeUntilDepature - remainingLoadingTime) / self.participants)
         if sampleTime >= 1:
-            self.waitingTime = MyRandom.RandomNumber.getInstance().getRandomNumber(sampleTime + 1)
+            self.waitingTime = MyRandom.RandomNumber.getInstance().getRandomNumber(sampleTime)
         elif sampleTime < 1:
-            upperLimit = (10 * (1 - (math.exp(sampleTime - 1)))) + 1
-            self.waitingTime = MyRandom.RandomNumber.getInstance().getRandomNumber(max((min(upperLimit,
-                                                                                            timeUntilDepature)) + 1, 1))
+            upperLimit = round((10 * (1 - (math.exp(sampleTime - 1)))) + 1)
+            self.waitingTime = MyRandom.RandomNumber.getInstance().getRandomNumber(max(min(upperLimit,
+                                                                                           timeUntilDepature), 1))
             if not self.stayedConnected:
                 self.stayConnected = True
                 self.stayedConnected = True
