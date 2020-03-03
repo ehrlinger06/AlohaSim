@@ -107,3 +107,46 @@ meta = {
             timeSince = currentTime - arrival
             # time until depature
             timeUntil = departure - currentTime
+
+
+    #if P <= 0:
+            #    self.P_out = 0.0
+            #    self.P_old = 0.0
+            #    self.chargingFLAG = False
+            #    self.arriverFlag = False
+            #    self.calculateWaitingTime(inputs)
+           #     if self.stayConnected:
+           #         self.waitingTime += 1
+           #         self.chargingWhileWaiting(inputs)
+           # elif P > 0 and self.S >= TRAFO_LIMIT:
+           #     timeDifference = self.time - self.latestCollisionTime
+            #    if timeDifference <= 2:
+            #        sampleTime = int(((self.getAtt('departure_time', inputs) - self.time)
+            #                          - (self.calculateLoadingTime(inputs))) / self.participants)
+            #        if sampleTime > 1:
+            #            self.P_out = 0.0
+            #            self.P_old = 0.0
+            #            self.chargingFLAG = False
+            #            self.arriverFlag = False
+            #            self.calculateWaitingTime(inputs)
+            #            if self.stayConnected:
+            #                self.waitingTime += 1
+            #                self.chargingWhileWaiting(inputs)
+             #       else:
+            #            self.P_out = P
+             #           self.chargingFLAG = True
+            #            self.arriverFlag = False
+            #    else:
+            #        self.P_out = P
+            #        self.chargingFLAG = True
+            #        self.arriverFlag = False
+
+
+            # if P <= 0 and self.S <= 110000:
+            #     print('   SlottedAloha_waitingTime: Vm COLLISION, S ok, in step:', self.time, 'in controller Aloha_', self.id)
+            # elif P <= 0 and self.S > 110000:
+            #    print('   SlottedAloha_waitingTime: Vm COLLISION, S COLLISION, in step:', self.time,
+            #          'in controller Aloha_', self.id)
+            # elif P > 0 and self.S > 110000:
+            #    print('   SlottedAloha_waitingTime: Vm ok, S COLLISION, in step:', self.time,
+            #          'in controller Aloha_', self.id)
