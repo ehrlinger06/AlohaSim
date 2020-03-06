@@ -24,7 +24,7 @@ sim_config = {
 }
 
 START = '2019-11-17 00:00:00'
-END = '2019-11-24 00:00:00'
+END = '2019-11-18 00:00:00'
 DIFF = datetime.fromisoformat(END.replace(' ', 'T')) - datetime.fromisoformat(START.replace(' ', 'T'))
 DURATION = DIFF.total_seconds()
 GRID_NAME = 'ieee906'
@@ -34,8 +34,8 @@ BATTERY_CAPACITY = 36253.11
 seeds = [41]  # 41, 53, 67, 79
 speeds = [96]
 limits = [250]
-methods = ['SlottedAloha_participants_VDE_tau_trafo']
-run_nr = 2
+methods = ['SlottedAloha_waiting_new']
+run_nr = 8
 
 # 'tau_VDE', 'SlottedAloha_participants_VDE_tau', 'SlottedAloha_participants_VDE_tau_trafo'
 # 'SlottedAloha_waitingTime_VDE_tau', 'SlottedAloha_waitingTime_VDE_tau_trafo', 'TrafoLoad'

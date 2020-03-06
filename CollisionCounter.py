@@ -4,6 +4,7 @@ class CollisionCounter():
     __instance = None
     initialized = False
     collisionsDict = {}
+    timingDict = {}
 
     @staticmethod
     def getInstance():
@@ -25,6 +26,13 @@ class CollisionCounter():
             # when key is not present
             CollisionCounter.collisionsDict[step] = 1
 
+    def waitingTimeCalculated(self, step):
+        if step in CollisionCounter.timingDict:
+            CollisionCounter.timingDict[step] = CollisionCounter.timingDict[step] + 1
+        else:
+            # when key is not present
+            CollisionCounter.timingDict[step] = 1
+
     def printResults(self):
         # number of steps in which a collisions occurred
         print("number of steps in which a collisions occurred:", len(CollisionCounter.collisionsDict))
@@ -32,6 +40,13 @@ class CollisionCounter():
         for numb in CollisionCounter.collisionsDict.values():
             numberOfCollisions += numb
         print("number of collisions:", numberOfCollisions)
+        print("number of steps in which a waitingTime was calculated:", len(CollisionCounter.timingDict))
+        numberOfTimings = 0
+        for numb in CollisionCounter.timingDict.values():
+            numberOfTimings += numb
+        print("number of waitingTimes:", numberOfTimings)
+
+
 
     def getCollStepsNumber(self):
         return len(CollisionCounter.collisionsDict)

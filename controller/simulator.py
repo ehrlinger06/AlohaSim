@@ -4,6 +4,7 @@ import versions.SA_participants_VDE_tau as SlottedAloha_participants_VDE_tau
 import versions.SA_participants_VDE_tau_trafo as SlottedAloha_participants_VDE_tau_trafo
 import versions.SA_waitingTime as SlottedAloha_waitingTime
 import versions.SA_waitingTime_VDE_tau as SlottedAloha_waitingTime_VDE_tau
+import versions.SA_waiting_new as SlottedAloha_waiting_new
 import versions.SA_waitingTime_VDE_tau_trafo as SlottedAloha_waitingTime_VDE_tau_trafo
 import versions.SlottedAloha as pureAloha
 import versions.TrafoLoad_noEVs as TrafoLoad
@@ -53,6 +54,9 @@ class AlohaSim(mosaik_api.Simulator):
         if self.method == 'SlottedAloha_waitingTime_VDE_tau':
             self.models[eid] = SlottedAloha_waitingTime_VDE_tau.\
                 SlottedAloha_waitingTime_VDE_tau(node_id, id=i + start_idx, seed=seed)
+        if self.method == 'SlottedAloha_waiting_new':
+            self.models[eid] = SlottedAloha_waiting_new.\
+                SlottedAloha_waiting_new(node_id, id=i + start_idx, seed=seed)
         if self.method == 'SlottedAloha_waitingTime_VDE_tau_trafo':
             self.models[eid] = SlottedAloha_waitingTime_VDE_tau_trafo. \
                 SlottedAloha_waitingTime_VDE_tau_trafo(node_id, id=i + start_idx, seed=seed)
@@ -80,7 +84,8 @@ class AlohaSim(mosaik_api.Simulator):
             instance = self.models.get(model)
             if self.method == 'SlottedAloha' or self.method == 'SlottedAloha_waitingTime_VDE_tau' \
                     or self.method == 'SlottedAloha_waitingTime_VDE_tau_trafo' or self.method == 'tau_VDE' \
-                    or self.method == 'SlottedAloha_participants_VDE_tau' or self.method == 'SlottedAloha_participants_VDE_tau_trafo':
+                    or self.method == 'SlottedAloha_participants_VDE_tau' or self.method == 'SlottedAloha_participants_VDE_tau_trafo'\
+                    or self.method == 'SlottedAloha_waiting_new':
                 instance.step(time, input, participants)
             elif self.method == 'SlottedAloha_lowestGlobalVoltage':
                 inputs = self.getMinimalVoltage(inputs)
