@@ -19,9 +19,9 @@ port = 8086
 user = 'root'
 password = 'root'
 dbname = 'aloha_test_10'
-run_id = 'SlottedAloha_participants_VDE_tau_trafo2'
+run_id = 'SlottedAloha_waitingTime_VDE_tau_trafo4'
 
-plot_folder = 'C:/Users/MJE17/OneDrive/Dokumente/plots/SA_participants/SA_participants_VDE_tau_trafo'
+plot_folder = 'C:/Users/MJE17/OneDrive/Dokumente/plots/SA_waitingTime/SA_waitingTime_VDE_tau_trafo'
 
 
 
@@ -253,14 +253,14 @@ def main():
 
     flex_evs = [t for t in query_tag('component') if 'Flex' in t]
     methods = query_tag('method')
-    methods = ['SlottedAloha_participants_VDE_tau_trafo']
+    methods = ['SlottedAloha_waitingTime_VDE_tau_trafo']
     # scenarios = query_tag('scenario')
     # speeds = query_tag('speed')
     # limits = query_tag('limit')
     seeds = query_tag('seed')
     seeds = ['41']
     run_nrs = query_tag('run_nr')
-    run_nrs = ['2']
+    run_nrs = ['4']
 
     #insts = [(scenario, speed, limit)
     #         for scenario in scenarios
