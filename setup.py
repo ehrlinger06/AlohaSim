@@ -34,11 +34,13 @@ BATTERY_CAPACITY = 36253.11
 seeds = [41]  # 41, 53, 67, 79
 speeds = [96]
 limits = [250]
-methods = ['SlottedAloha_waiting_new']
-run_nr = 8
+methods = ['tau_VDE_trafo']
+run_nr = 1
 
-# 'tau_VDE', 'SlottedAloha_participants_VDE_tau', 'SlottedAloha_participants_VDE_tau_trafo'
-# 'SlottedAloha_waitingTime_VDE_tau', 'SlottedAloha_waitingTime_VDE_tau_trafo', 'TrafoLoad'
+# 'tau_VDE', 'tau_VDE_trafo'
+# 'SlottedAloha_participants_VDE_tau', 'SlottedAloha_participants_VDE_tau_trafo'
+# 'SlottedAloha_waitingTime_VDE_tau', 'SlottedAloha_waitingTime_VDE_tau_trafo',
+# 'TrafoLoad'
 
 def get_free_tcp_port():
     tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -152,8 +154,6 @@ def connect_cs_to_grid(world, controllers, evs, grid, trafo):
     # connect trafo to controllers
     for c in controllers:
         world.connect(trafo['transformer'], c, 'P_from', 'Q_from')
-
-
 
     # connect controller to evs
     ev_data = world.get_data(evs, 'node_id')
