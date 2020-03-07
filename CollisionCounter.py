@@ -3,8 +3,10 @@
 class CollisionCounter():
     __instance = None
     initialized = False
-    collisionsDict = {}
+    collisionsDictVolt = {}
+    collisionsDictTrafo = {}
     timingDict = {}
+    counter = 0
 
     @staticmethod
     def getInstance():
@@ -18,13 +20,21 @@ class CollisionCounter():
         else:
             CollisionCounter.__instance = self
 
-    def addCollision(self, step):
+    def addCollisionVolt(self, step):
         # when key is present
-        if step in CollisionCounter.collisionsDict:
-            CollisionCounter.collisionsDict[step] = CollisionCounter.collisionsDict[step] + 1
+        if step in CollisionCounter.collisionsDictVolt:
+            CollisionCounter.collisionsDictVolt[step] = CollisionCounter.collisionsDictVolt[step] + 1
         else:
             # when key is not present
-            CollisionCounter.collisionsDict[step] = 1
+            CollisionCounter.collisionsDictVolt[step] = 1
+
+    def addCollisionTrafo(self, step):
+        # when key is present
+        if step in CollisionCounter.collisionsDictTrafo:
+            CollisionCounter.collisionsDictTrafo[step] = CollisionCounter.collisionsDictTrafo[step] + 1
+        else:
+            # when key is not present
+            CollisionCounter.collisionsDictTrafo[step] = 1
 
     def waitingTimeCalculated(self, step):
         if step in CollisionCounter.timingDict:
@@ -33,13 +43,22 @@ class CollisionCounter():
             # when key is not present
             CollisionCounter.timingDict[step] = 1
 
+    def riseCounter(self):
+        CollisionCounter.counter += 1
+
     def printResults(self):
         # number of steps in which a collisions occurred
-        print("number of steps in which a collisions occurred:", len(CollisionCounter.collisionsDict))
-        numberOfCollisions = 0
-        for numb in CollisionCounter.collisionsDict.values():
-            numberOfCollisions += numb
-        print("number of collisions:", numberOfCollisions)
+        print("number of steps in which a  voltage collisions occurred:", len(CollisionCounter.collisionsDictVolt))
+        numberOfCollisionsVolt = 0
+        for numb in CollisionCounter.collisionsDictVolt.values():
+            numberOfCollisionsVolt += numb
+        print("number of voltage collisions:", numberOfCollisionsVolt)
+        print("number of steps in which a trafo collisions occurred:", len(CollisionCounter.collisionsDictTrafo))
+        numberOfCollisionsTrafo = 0
+        for numb in CollisionCounter.collisionsDictTrafo.values():
+            numberOfCollisionsTrafo += numb
+        print("number of Trafo collisions:", numberOfCollisionsTrafo)
+        print("counter:", CollisionCounter.counter)
         print("number of steps in which a waitingTime was calculated:", len(CollisionCounter.timingDict))
         numberOfTimings = 0
         for numb in CollisionCounter.timingDict.values():
