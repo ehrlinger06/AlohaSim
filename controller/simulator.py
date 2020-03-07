@@ -9,6 +9,7 @@ import versions.SA_waitingTime_VDE_tau_trafo as SlottedAloha_waitingTime_VDE_tau
 import versions.SlottedAloha as pureAloha
 import versions.TrafoLoad_noEVs as TrafoLoad
 import versions.tau_vde as tau_vde
+import versions.tau_VDE_trafo as tau_vde_trafo
 
 MODEL_NAME = 'Aloha'
 meta = {
@@ -73,6 +74,8 @@ class AlohaSim(mosaik_api.Simulator):
 
         if self.method == 'tau_VDE':
             self.models[eid] = tau_vde.TauVde(node_id, id=i + start_idx, seed=seed)
+        if self.method == 'tau_VDE_trafo':
+            self.models[eid] = tau_vde_trafo.TauVde_Trafo(node_id, id=i + start_idx, seed=seed)
 
         return [{'eid': eid, 'type': model}]
 
@@ -85,7 +88,7 @@ class AlohaSim(mosaik_api.Simulator):
             if self.method == 'SlottedAloha' or self.method == 'SlottedAloha_waitingTime_VDE_tau' \
                     or self.method == 'SlottedAloha_waitingTime_VDE_tau_trafo' or self.method == 'tau_VDE' \
                     or self.method == 'SlottedAloha_participants_VDE_tau' or self.method == 'SlottedAloha_participants_VDE_tau_trafo'\
-                    or self.method == 'SlottedAloha_waiting_new':
+                    or self.method == 'tau_VDE_trafo':
                 instance.step(time, input, participants)
             elif self.method == 'SlottedAloha_lowestGlobalVoltage':
                 inputs = self.getMinimalVoltage(inputs)
