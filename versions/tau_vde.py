@@ -9,7 +9,6 @@ TRAFO_LIMIT = 121000
 
 
 class TauVde(SlottedAloha_preWaitingArrivers):
-
     def __init__(self, node_id, id, seed):
         self.data = node_id
         self.step_size = 60
@@ -39,39 +38,6 @@ class TauVde(SlottedAloha_preWaitingArrivers):
         self.Vm_10M_average = 230.0
         self.Vm_sum = 0
 
-    def calcPower(self, inputs):
-        available = self.getAtt('available', inputs)
-        if available:
-            possible_charge_rate = self.getAtt('possible_charge_rate', inputs)
-            Vm = self.getAtt('Vm', inputs)
-            if self.checkAtt(possible_charge_rate) & self.checkAtt(Vm):
-                self.P_new = possible_charge_rate * Vm * self.calculatePowerIndex(Vm)
-                if self.P_old > self.P_new:
-                    difference = (self.P_old - self.P_new) * 0.632
-                    self.P_out = self.P_old - difference
-                    self.P_old = self.P_out
-                else:
-                    difference = (self.P_new - self.P_old) * 0.632
-                    self.P_out = self.P_old + difference
-                    self.P_old = self.P_out
-                return self.P_out
-        return 0.0
-
-    def calculatePowerIndex(self, Vm):
-        if self.voltageHighEnough(Vm):
-            powerIndex = 20 * Vm / NORM_VOLTAGE - 17.6
-            if (powerIndex >= 0.0) & (powerIndex <= 1.0):
-                return powerIndex
-            elif powerIndex > 1:
-                return 1.0
-        return 0
-
-    def voltageHighEnough(self, Vm):
-        if Vm > 230 * 0.88:
-            return True
-        else:
-            return False
-
     def step(self, simTime, inputs, participants):
         self.participants = participants
         self.time = ((simTime - self.step_size) / self.step_size)
@@ -84,8 +50,13 @@ class TauVde(SlottedAloha_preWaitingArrivers):
         if self.getAtt('available', inputs) & (self.getAtt('current_soc', inputs) < 100.0):
             self.charging(inputs)
 
-            if self.S >= TRAFO_LIMIT or self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE):
-                CollisionCounter.CollisionCounter.getInstance().addCollision(self.time)
+            if self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE):
+                CollisionCounter.CollisionCounter.getInstance().addCollisionVolt(self.time)
+            if self.S >= TRAFO_LIMIT:
+                CollisionCounter.CollisionCounter.getInstance().addCollisionTrafo(self.time)
+
+            if (self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE) or self.S >= TRAFO_LIMIT):
+                CollisionCounter.CollisionCounter.getInstance().riseCounter()
         else:
             self.P_out = 0.0
             self.P_old = 0.0
@@ -93,15 +64,55 @@ class TauVde(SlottedAloha_preWaitingArrivers):
         self.calc_10M_average(inputs)
 
     def charging(self, inputs):
-        P = self.calcPower(inputs)
+        P_new = self.calcPower(inputs)
 
-        if P > 0:
-            self.P_out = P
+        if P_new > 0:
+            self.P_out = self.filterPowerValue(P_new)
             self.chargingFLAG = True
         else:
-            self.P_out = 0.0
-            self.P_old = 0.0
+            self.P_out = max(self.filterPowerValue(0.0), 1.0)
+            if self.P_out == 1.0:
+                self.P_out = 0.0
             self.chargingFLAG = False
+
+    def calcPower(self, inputs):
+        if self.getAtt('available', inputs):
+            possible_charge_rate = self.getAtt('possible_charge_rate', inputs)
+            Vm = self.getAtt('Vm', inputs)
+            P = possible_charge_rate * Vm
+            if not self.stayConnected:
+                P = P * self.calculateVoltageIndex(Vm) * self.calculateTrafoIndex()
+            return P
+        return 0.0
+
+    def calculateVoltageIndex(self, Vm):
+        if self.voltageHighEnough(Vm):
+            voltIndex = 20 * Vm / NORM_VOLTAGE - 17.6
+            if (voltIndex >= 0.0) & (voltIndex <= 1.0):
+                return voltIndex
+            elif voltIndex > 1:
+                return 1.0
+        return 0
+
+    def calculateTrafoIndex(self):
+        if self.S <= TRAFO_LIMIT:
+            trafoIndex = (-1 / 24200) * self.S + 5
+            if (trafoIndex >= 0.0) & (trafoIndex <= 1.0):
+                return trafoIndex
+            elif trafoIndex > 1:
+                return 1.0
+        return 0.0
+
+    def filterPowerValue(self, P_new):
+        if self.P_old > P_new:
+            difference = (self.P_old - P_new) * 0.632
+            P_out = self.P_old - difference
+            self.P_old = P_out
+        else:
+            difference = (P_new - self.P_old) * 0.632
+            P_out = self.P_old + difference
+            self.P_old = P_out
+        return P_out
 
     def calc_10M_average(self, inputs):
         self.Vm_sum += self.getAtt('Vm', inputs)

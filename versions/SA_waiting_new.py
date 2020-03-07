@@ -70,15 +70,19 @@ class SlottedAloha_waiting_new(SlottedAloha.SlottedAloha_Class):
                 self.charging(inputs)
             elif (not self.chargingFLAG) & (self.waitingTime > 0):  # not charging right now, waiting time not yet over
                 # self.waitingTime -= 1
-
                 self.whileWaiting()
             elif self.chargingFLAG and not self.stayConnected:  # charging right now, time is not over
                 self.charging(inputs)
             elif self.chargingFLAG and self.stayConnected:
                 self.chargingWhileWaiting(inputs)
 
-            if self.S >= TRAFO_LIMIT or self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE):
-                CollisionCounter.CollisionCounter.getInstance().addCollision(self.time)
+            if self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE):
+                CollisionCounter.CollisionCounter.getInstance().addCollisionVolt(self.time)
+            if self.S >= TRAFO_LIMIT:
+                CollisionCounter.CollisionCounter.getInstance().addCollisionTrafo(self.time)
+
+            if (self.getAtt('Vm', inputs) <= (0.88 * NORM_VOLTAGE) or self.S >= TRAFO_LIMIT):
+                CollisionCounter.CollisionCounter.getInstance().riseCounter()
         else:
             self.chargingFLAG = False
             self.stayConnected = False
