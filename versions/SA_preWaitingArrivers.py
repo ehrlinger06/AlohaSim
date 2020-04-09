@@ -18,6 +18,9 @@ meta = {
 
 
 class SlottedAloha_preWaitingArrivers:
+    """
+    serves alone als parent class for tau_vde and tau_VDE_trafo
+    """
     def __init__(self, node_id, id, seed):
         self.data = node_id
         self.step_size = 60

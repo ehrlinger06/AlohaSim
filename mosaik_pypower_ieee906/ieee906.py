@@ -30,9 +30,6 @@ def get_load_busses():
         busses = ['bus_' + row[2] for row in list(config_reader)[3:]]
     return busses
 
-def get_transformer():
-    print("hello")
-
 
 def connect_ieee906(world, start_time=START):
     """

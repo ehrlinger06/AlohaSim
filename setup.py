@@ -1,11 +1,8 @@
 import random
 import socket
-import uuid
 from datetime import datetime
 import CollisionCounter as CollisionCounter
-import LowVoltageCounter as LowVoltageCounter
 
-# from mosaik.util import connect_many_to_one
 import mosaik
 
 from mosaik_pypower_ieee906 import ieee906
@@ -31,11 +28,13 @@ GRID_NAME = 'ieee906'
 
 BATTERY_CAPACITY = 36253.11
 
-seeds = [41]  # 41, 53, 67, 79
-speeds = [96]
-limits = [250]
-methods = ['tau_VDE_trafo']
-run_nr = 1
+# RANDOM
+seed = 41  # 7, 17, 29, 41, 53, 67, 79, 97, 107, 127
+# RANDOM
+speed = 96
+method = 'SlottedAloha_participants_VDE_tau'
+run_nr = 8
+
 
 # 'tau_VDE', 'tau_VDE_trafo'
 # 'SlottedAloha_participants_VDE_tau', 'SlottedAloha_participants_VDE_tau_trafo'
@@ -43,6 +42,10 @@ run_nr = 1
 # 'TrafoLoad'
 
 def get_free_tcp_port():
+    """
+    searches a free tcp-port and returns the portnumber
+    :return: the number of a free tcp port
+    """
     tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcp.bind(('', 0))
     addr, port = tcp.getsockname()
@@ -51,41 +54,42 @@ def get_free_tcp_port():
 
 
 def main():
-    for i in range(len(seeds)):
-        for j in range(len(methods)):
-            mosaik_config = {'addr': ('127.0.0.1', get_free_tcp_port())}
-            world = mosaik.World(sim_config, mosaik_config=mosaik_config)
-            create_scenario(world, GRID_NAME, charge_speed=speeds[0], method=methods[j], limit=limits[0],
-                            seed=seeds[i],
-                            influxdb=True)
-            print("starting method ", methods[j], " with seed ", seeds[i])
-            world.run(until=DURATION)  # As fast as possilbe
-            world.shutdown()  # delete world again
-            CollisionCounter.CollisionCounter.getInstance().printResults()
-            LowVoltageCounter.LowVoltageCounter.getInstance().print()
-            print("finished method ", methods[j], " with seed ", seeds[i])
+    """
+    sets up und runs a mosaik world with a scenario in it, layed out by the parameters set earlier.
+    """
+    mosaik_config = {'addr': ('127.0.0.1', get_free_tcp_port())}
+    world = mosaik.World(sim_config, mosaik_config=mosaik_config)
+    create_scenario(world, GRID_NAME, charge_speed=speed, method=method, seed=seed, influxdb=True)
+    print("Starting method ", method, " with seed ", seed)
+    world.run(until=DURATION)  # As fast as possilbe
+    world.shutdown()  # delete world again
+    CollisionCounter.CollisionCounter.getInstance().printResults()
+    print("Finished method ", method, " with seed ", seed)
 
 
-
-def getTrafo(grid_file, grid):
-    print('Hallo')
-
-
-
-def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxdb=True):
+def create_scenario(world, grid_name, charge_speed, method, seed, influxdb=True):
+    """
+    starts the three contained simulators(FlexEV, Aloha and IEEE906) withe the needed parameters, connects the
+    simulators with each other where necessary
+    :param world: a mosaik world object
+    :param grid_name: the name of the used power grid
+    :param charge_speed: the maximum possible charge speed
+    :param method: the method used in this simulation
+    :param seed: the start value for generating random numbers
+    :param influxdb: a flag, that indicates if te results are stored in an influxdb database
+    """
     grid_file = 'data/%s.json' % grid_name
 
     # Start simulators
     flexev = world.start("FlexEVSim")
     aloha = world.start("AlohaSim", step_size=60, method=method)
 
+    # collect grid informations
     grid, houses, trafo = ieee906.connect_ieee906(world, start_time=START)
     evs = ieee906.get_load_busses()
 
     random.seed(42)
     random.shuffle(evs)
-    # evs = evs + evs[0:7]
-    # evs = evs + evs[0:27]
     evs = evs + evs
 
     controllers = [aloha.AlohaOben(node_id=node_id, seed=seed) for node_id in evs]
@@ -96,11 +100,12 @@ def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxd
 
     connect_cs_to_grid(world, controllers, evflexs, grid, trafo)
 
+    # if true, establishes connection to a running influxdb entity to store results
     if influxdb:
         influxdb_collector_sim = world.start('InfluxDB', step_size=60)
         influxdb_collector = influxdb_collector_sim.Database(
-            db_name='aloha_test_10',
-            run_id=methods[0] + str(run_nr),
+            db_name='aloha_test_12',
+            run_id=method + str(run_nr),
             start_timestamp=START.replace(' ', 'T'),
             time_unit='s',
             host='localhost',
@@ -137,12 +142,20 @@ def create_scenario(world, grid_name, charge_speed, method, limit, seed, influxd
         # Add General Tag to all entities
         influxdb_collector_sim.add_component_tag(all_ids, 'seed', str(seed))
         influxdb_collector_sim.add_component_tag(all_ids, 'speed', str(charge_speed))
-        influxdb_collector_sim.add_component_tag(all_ids, 'limit', str(limit))
         influxdb_collector_sim.add_component_tag(all_ids, 'method', method)
         influxdb_collector_sim.add_component_tag(all_ids, 'run_nr', run_nr)
 
 
 def connect_cs_to_grid(world, controllers, evs, grid, trafo):
+    """
+    establshes the connections betwenn the different instances of the simulators.
+
+    :param world: a mosaik world object
+    :param controllers: a list of controller-objects
+    :param evs: a list of ev-objects
+    :param grid: the powergrid used in the scenario
+    :param trafo: the Transformer of the used power grid
+    """
     # Connect bus to controller
     buses = filter(lambda e: e.type == 'PQBus', grid)
     buses = {b.eid.split('-')[1]: b for b in buses}

@@ -2,14 +2,10 @@ import mosaik_api
 
 import versions.SA_participants_VDE_tau as SlottedAloha_participants_VDE_tau
 import versions.SA_participants_VDE_tau_trafo as SlottedAloha_participants_VDE_tau_trafo
-import versions.SA_waitingTime as SlottedAloha_waitingTime
 import versions.SA_waitingTime_VDE_tau as SlottedAloha_waitingTime_VDE_tau
-import versions.SA_waiting_new as SlottedAloha_waiting_new
 import versions.SA_waitingTime_VDE_tau_trafo as SlottedAloha_waitingTime_VDE_tau_trafo
-import versions.SlottedAloha as pureAloha
-import versions.TrafoLoad_noEVs as TrafoLoad
-import versions.tau_vde as tau_vde
 import versions.tau_VDE_trafo as tau_vde_trafo
+import versions.tau_vde as tau_vde
 
 MODEL_NAME = 'Aloha'
 meta = {
@@ -37,27 +33,35 @@ class AlohaSim(mosaik_api.Simulator):
         self.collisionCounter = 0
 
     def init(self, sid, step_size, method):
+        """
+        initiates the simulator for the controller instances
+
+        :param sid:
+        :param step_size: the step size of one time step
+        :param method: the method used by the controllers in this simlation
+        :return: the meta informations of this simulator
+        """
         self.step_size = step_size
         self.method = method
         return self.meta
 
     def create(self, num, model, node_id, seed):
+        """
+        creates a controller instance for use in the simualtion
+
+        :param num: the identification number of this controller
+        :param model: the model of the conntroller
+        :param node_id: the node the controller works with on in the simulation
+        :param seed: the start value for generating random numbers
+        :return: a new instance of a controller object, represented by a entry in the self.models-list
+        """
         start_idx = len(self._eids)
         i = len(self.models)
         eid = 'Aloha_%s' % (i + start_idx)
 
-        if self.method == 'SlottedAloha':
-            self.models[eid] = pureAloha.SlottedAloha_Class(node_id, id=i + start_idx, seed=seed)
-
-        if self.method == 'SlottedAloha_waitingTime':
-            self.models[eid] = SlottedAloha_waitingTime.SlottedAloha_waitingTime(node_id, id=i + start_idx, seed=seed)
-
         if self.method == 'SlottedAloha_waitingTime_VDE_tau':
             self.models[eid] = SlottedAloha_waitingTime_VDE_tau.\
                 SlottedAloha_waitingTime_VDE_tau(node_id, id=i + start_idx, seed=seed)
-        if self.method == 'SlottedAloha_waiting_new':
-            self.models[eid] = SlottedAloha_waiting_new.\
-                SlottedAloha_waiting_new(node_id, id=i + start_idx, seed=seed)
         if self.method == 'SlottedAloha_waitingTime_VDE_tau_trafo':
             self.models[eid] = SlottedAloha_waitingTime_VDE_tau_trafo. \
                 SlottedAloha_waitingTime_VDE_tau_trafo(node_id, id=i + start_idx, seed=seed)
@@ -69,9 +73,6 @@ class AlohaSim(mosaik_api.Simulator):
             self.models[eid] = SlottedAloha_participants_VDE_tau_trafo.\
                 SlottedAloha__participants_VDE_tau_trafo(node_id, id=i + start_idx, seed=seed)
 
-        if self.method == 'TrafoLoad':
-            self.models[eid] = TrafoLoad.TrafoLoad(node_id, id=i + start_idx, seed=seed)
-
         if self.method == 'tau_VDE':
             self.models[eid] = tau_vde.TauVde(node_id, id=i + start_idx, seed=seed)
         if self.method == 'tau_VDE_trafo':
@@ -80,25 +81,23 @@ class AlohaSim(mosaik_api.Simulator):
         return [{'eid': eid, 'type': model}]
 
     def step(self, time, inputs):
+        """
+        initiates a time step for each instance of the simulator with the input received form other parts
+        of the simulator
+
+        :param time: the current time in seconds
+        :param inputs: the data received form other parts
+        :return: the new time after the step is completed
+        """
         participants = self.getParticipants(inputs)
-        arrivers = self.getArrivers(inputs, time)
         for model in self.models:
             input = inputs.get(model)
             instance = self.models.get(model)
-            if self.method == 'SlottedAloha' or self.method == 'SlottedAloha_waitingTime_VDE_tau' \
+            if self.method == 'SlottedAloha_waitingTime_VDE_tau' \
                     or self.method == 'SlottedAloha_waitingTime_VDE_tau_trafo' or self.method == 'tau_VDE' \
                     or self.method == 'SlottedAloha_participants_VDE_tau' or self.method == 'SlottedAloha_participants_VDE_tau_trafo'\
                     or self.method == 'tau_VDE_trafo':
                 instance.step(time, input, participants)
-            elif self.method == 'SlottedAloha_lowestGlobalVoltage':
-                inputs = self.getMinimalVoltage(inputs)
-                instance.step(time, input, arrivers, participants)
-            elif self.method == 'TrafoLoad':
-                instance.step(input, time)
-            else:
-                instance.step(time, input, arrivers, participants)
-            # self.collisionCounter += instance.collisionCounter
-        # print("simulator.collisionCounter:", self.collisionCounter)
 
         return time + self.step_size
 
@@ -116,32 +115,14 @@ class AlohaSim(mosaik_api.Simulator):
 
         return data
 
-    def getArrivers(self, inputs, time):
-        counterArr = 0
-        timeMin = ((time - self.step_size) / self.step_size)
-        for item in inputs.values():
-            arrival_time = list(item.get('arrival_time').values())[0]
-            if timeMin == arrival_time:
-                counterArr += 1
-        return counterArr
-
     def getParticipants(self, inputs):
+        """
+        calculates the amount of participants, which are available and have a state of charge of less than a 100 percent
+        :param inputs: the data received form other parts of the simulator
+        :return: the amount of participants
+        """
         counterPar = 0
         for item in inputs.values():
             if list(item.get('available').values())[0] and list(item.get('current_soc').values())[0] < 100.0:
                 counterPar += 1
         return counterPar
-
-    def getMinimalVoltage(self, inputs):
-        minVm = -1
-        for item in inputs.values():
-            Vm = list(item.get('Vm').values())[0]
-            if minVm == -1:
-                minVm = Vm
-            else:
-                minVm = min(minVm, Vm)
-
-        for item in inputs.values():
-            innerDict = item.get('Vm')
-            innerDict[list(innerDict.keys())[0]] = minVm
-        return inputs

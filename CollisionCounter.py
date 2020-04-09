@@ -58,7 +58,7 @@ class CollisionCounter():
         for numb in CollisionCounter.collisionsDictTrafo.values():
             numberOfCollisionsTrafo += numb
         print("number of Trafo collisions:", numberOfCollisionsTrafo)
-        print("counter:", CollisionCounter.counter)
+        print("number of situations a collision occurred:", CollisionCounter.counter)
         print("number of steps in which a waitingTime was calculated:", len(CollisionCounter.timingDict))
         numberOfTimings = 0
         for numb in CollisionCounter.timingDict.values():

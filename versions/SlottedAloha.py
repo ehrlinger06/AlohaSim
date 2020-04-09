@@ -22,6 +22,10 @@ meta = {
 
 
 class SlottedAloha_Class:
+    """
+    serves as a parent class for SA_participants_VDE_tau, SA_participants_VDE_tau_trafo, SA_waitingTime_VDE_tau
+    and SA_waitingTime_VDE_tau_trafo
+    """
     def __init__(self, node_id, id, seed):
         self.data = node_id
         self.step_size = 60
